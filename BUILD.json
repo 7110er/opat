@@ -1,0 +1,8 @@
+{
+ "release_id": "R64",
+ "artifact_version": "v2.50",
+ "build_id": "02f142f79ecaa8aa",
+ "ui_app_html_sha256": "a50de1909502bcf2345f31dc1e9786e8c2e86a1ceaf681e3811765fdb796ed6b",
+ "index_html_sha256": "191aab9d744743718dc5aecfbf0decd7188d86b6c375dc60ca0359b1831e36b6",
+ "csp": "default-src 'self'; script-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/client; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; frame-src https://accounts.google.com/gsi/; connect-src 'self' https://accounts.google.com/gsi/ https://script.google.com https://script.googleusercontent.com; img-src 'self' data: https://*.googleusercontent.com https://*.gstatic.com; base-uri 'none'; form-action 'none'; object-src 'none'"
+}

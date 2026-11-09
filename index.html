@@ -1,0 +1,1979 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/client; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; frame-src https://accounts.google.com/gsi/; connect-src 'self' https://accounts.google.com/gsi/ https://script.google.com https://script.googleusercontent.com; img-src 'self' data: https://*.googleusercontent.com https://*.gstatic.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta name="referrer" content="no-referrer">
+<title>OPAT 門診靜脈抗生素治療平台</title>
+<!-- OPAT GitHub 版　Release R64（v2.50）Build 02f142f79ecaa8aa　ui/app.html sha256 a50de1909502bcf2345f31dc1e9786e8c2e86a1ceaf681e3811765fdb796ed6b -->
+<script src="config.js"></script>
+<script>/* OPAT-GITHUB-SHIM-BEGIN（tools/build_github_pages.py 產生；請勿手改） */
+(function () {
+  /* ★ 不得被其他網站以 iframe 嵌入（meta 形式之 CSP 無法設定 frame-ancestors；點擊劫持防護改在這裡） */
+  if (window.top !== window.self) {
+    try { window.top.location = window.self.location.href; } catch (e) {}
+    document.documentElement.innerHTML = '<body><p>本頁不得嵌入其他網站。請直接開啟網址。</p></body>';
+    return;
+  }
+  var CFG = window.OPAT_CONFIG || {};
+  var KEY = 'opat_session_v1';
+  var pending = [];
+  function $(id) { return document.getElementById(id); }
+  function getS() { try { return JSON.parse(window.sessionStorage.getItem(KEY) || 'null'); } catch (e) { return null; } }
+  function setS(s) { try { if (s) window.sessionStorage.setItem(KEY, JSON.stringify(s)); else window.sessionStorage.removeItem(KEY); } catch (e) {} }
+  function txt(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function post(body) {
+    if (!CFG.BACKEND_URL) return Promise.reject(new Error('config.js 尚未設定後端網址（BACKEND_URL）'));
+    return fetch(CFG.BACKEND_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                                    body: JSON.stringify(body), redirect: 'follow', credentials: 'omit', cache: 'no-store' })
+      .then(function (r) { return r.json(); });
+  }
+  function showLogin(msg) {
+    var o = $('opat-login'); if (o) o.hidden = false;
+    var m = $('opat-login-msg'); if (m) m.innerHTML = msg ? '<div class="msg warn">' + txt(msg) + '</div>' : '';
+  }
+  function hideLogin() { var o = $('opat-login'); if (o) o.hidden = true; }
+  function call(action, args, ok, fail) {
+    var s = getS();
+    if (!s || !s.token) { pending.push([action, args, ok, fail]); showLogin(); return; }
+    post({ action: action, args: args, session: s.token }).then(function (res) {
+      if (res && res.session && res.session.token)
+        setS({ token: res.session.token, exp_ms: res.session.exp_ms, idle_ms: res.session.idle_ms, me: s.me });
+      if (res && res.ok) { if (ok) ok(res.result); return; }
+      if (res && res.relogin) { setS(null); showLogin(res.reason || '請重新登入'); }
+      if (fail) fail(new Error((res && (res.reason || res.code)) || '伺服端沒有回應'));
+    }).catch(function (e) {
+      if (fail) fail(new Error('無法連線到後端（' + (e && e.message || e) + '）。請確認網路，或請管理者確認 config.js 之後端網址'));
+    });
+  }
+  function runner() {
+    var ok = null, fail = null, proxy;
+    var base = { withSuccessHandler: function (f) { ok = f; return proxy; },
+                 withFailureHandler: function (f) { fail = f; return proxy; },
+                 withUserObject: function () { return proxy; } };
+    proxy = new Proxy(base, { get: function (t, name) {
+      if (Object.prototype.hasOwnProperty.call(t, name)) return t[name];
+      return function () { call(String(name), Array.prototype.slice.call(arguments), ok, fail); };
+    } });
+    return proxy;
+  }
+  window.google = window.google || {};
+  Object.defineProperty(window.google, 'script', { configurable: true, value: {} });
+  Object.defineProperty(window.google.script, 'run', { configurable: true, get: runner });
+  function flush() { var q = pending.slice(); pending = []; q.forEach(function (c) { call(c[0], c[1], c[2], c[3]); }); }
+  function onCredential(resp) {
+    var m = $('opat-login-msg'); if (m) m.innerHTML = '<div class="msg ok">驗證中…</div>';
+    post({ action: 'login', id_token: resp && resp.credential }).then(function (res) {
+      if (!res || !res.ok) { showLogin((res && (res.reason || res.code)) || '登入失敗'); return; }
+      setS({ token: res.session.token, exp_ms: res.session.exp_ms, idle_ms: res.session.idle_ms, me: res.me });
+      var w = $('opat-me'); if (w) w.textContent = (res.me.display || res.me.email) + '（' + res.me.role + '｜' + res.me.person_id + '）';
+      hideLogin(); flush();
+    }).catch(function (e) { showLogin('無法連線到後端：' + (e && e.message || e)); });
+  }
+  function ensureShim() {
+    window.google = window.google || {};
+    if (!window.google.script || !Object.getOwnPropertyDescriptor(window.google.script, 'run')) {
+      Object.defineProperty(window.google, 'script', { configurable: true, value: {} });
+      Object.defineProperty(window.google.script, 'run', { configurable: true, get: runner });
+    }
+  }
+  function initGis() {
+    ensureShim();   /* Google 登入程式庫載入後，確認 google.script 仍在（不論它如何處理 window.google） */
+    if (!(window.google && window.google.accounts && window.google.accounts.id)) { setTimeout(initGis, 200); return; }
+    if (!CFG.GOOGLE_CLIENT_ID) { showLogin('config.js 尚未設定 Google 登入用戶端 ID（GOOGLE_CLIENT_ID）'); return; }
+    window.google.accounts.id.initialize({ client_id: CFG.GOOGLE_CLIENT_ID, callback: onCredential, auto_select: false,
+                                           cancel_on_tap_outside: true, ux_mode: 'popup' });
+    window.google.accounts.id.renderButton($('opat-gbtn'), { theme: 'outline', size: 'large', text: 'signin_with', locale: 'zh-TW' });
+  }
+  function connTest() {
+    var r = $('opat-conn'); r.textContent = '測試中…';
+    post({ action: 'ping' }).then(function (res) {
+      var d = (res && res.data) || {};
+      r.innerHTML = res && res.ok
+        ? '<div class="msg ok">後端連線正常：' + txt(d.release_id) + '（' + txt(d.artifact_version) + '）Build ' + txt(d.build_id)
+          + '｜驗章 ' + (d.rsa_local ? '本地 RS256' : '退路 tokeninfo') + '｜用戶端 ID ' + (d.client_id_configured ? '已設定' : '★ 控制台未設定') + '</div>'
+        : '<div class="msg bad">後端有回應但拒絕：' + txt(res && (res.reason || res.code)) + '</div>';
+    }).catch(function (e) { r.innerHTML = '<div class="msg bad">連不到後端：' + txt(e && e.message || e) + '</div>'; });
+  }
+  function logout() {
+    setS(null);
+    try { window.google.accounts.id.disableAutoSelect(); } catch (e) {}
+    post({ action: 'logout' }).catch(function () {});
+    window.location.reload();
+  }
+  window.addEventListener('DOMContentLoaded', function () {
+    var b = $('opat-conn-btn'); if (b) b.addEventListener('click', connTest);
+    var lo = $('opat-logout'); if (lo) lo.addEventListener('click', logout);
+    var s = getS();
+    if (s && s.me) { var w = $('opat-me'); if (w) w.textContent = (s.me.display || s.me.email) + '（' + s.me.role + '｜' + s.me.person_id + '）'; }
+    if (!s || !s.token) showLogin();
+    initGis();
+  });
+})();
+/* OPAT-GITHUB-SHIM-END */</script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+.opat-login{position:fixed;inset:0;background:rgba(245,247,249,.97);z-index:50;display:flex;align-items:center;justify-content:center;padding:16px}
+.opat-login[hidden]{display:none}
+.opat-login-card{max-width:460px;width:100%}
+.opat-topbar{position:fixed;right:10px;top:8px;z-index:20;display:flex;gap:8px;align-items:center;color:#fff}
+.opat-topbar .fieldnote{color:#dfe7ef}
+.opat-topbar button{min-height:32px;padding:4px 10px;font-size:12px}
+@media print{.opat-topbar,.opat-login{display:none !important}}
+</style>
+</head>
+<body>
+<div id="opat-login" class="opat-login" hidden>
+ <div class="card opat-login-card">
+  <h2>OPAT 門診靜脈抗生素治療平台</h2>
+  <div class="sub">請以院方於控制台核可之 Google 帳號登入。登入資訊只存在這個分頁，關閉分頁即清除；本網頁不儲存任何病人資料。</div>
+  <div id="opat-gbtn" style="margin:12px 0"></div>
+  <div id="opat-login-msg"></div>
+  <button class="act secondary" id="opat-conn-btn" type="button">連線測試</button>
+  <div id="opat-conn" class="fieldnote" style="margin-top:8px"></div>
+ </div>
+</div>
+<div class="opat-topbar"><span id="opat-me" class="fieldnote"></span> <button class="act secondary" id="opat-logout" type="button">登出</button></div>
+<!-- OPAT-APP-BEGIN ui/app.html -->
+<!-- OPAT Web App 主畫面。R41：五個問句分頁（O-103）。
+     設計上刻意樸素：白底、醫療藍灰、足夠留白。這是臨床工具，不是儀表板。
+     畫面欄位不寫死，由伺服端依 _SCREEN_CONTRACT 生成；分頁依「我現在要做什麼」而不是依身分。
+       我的工作      apiWorklist   有範圍授權之療程；只列缺項之提供者是我的項目（O-26）
+       這位病人      apiLoadEpisode 療程事實、現行計畫、四軸與缺項（DQ-R41-04）
+       這次判定      apiAssemble   工作狀態；放行另按（apiRelease；O-84）
+       我要填的      apiScreen     依伺服端角色之欄位；依落點實體分組送出（N-10）；條件展開（Show_When）
+       現況與限制    apiReadiness  四層現況與主檔列數 -->
+<style>
+/* R61／N29：衛教單列印——只印衛教單本身 */
+.handout{border:1px solid #ccd;padding:12px;margin:8px 0;position:relative;background:#fff}
+.handout .wm{color:#b00;font-weight:bold;border:2px dashed #b00;padding:6px;margin-bottom:8px}
+@media print{ body *{visibility:hidden} #printarea, #printarea *{visibility:visible} #printarea{position:absolute;left:0;top:0;width:100%;border:none} }
+  :root{--ink:#1a2733;--mut:#5b6b7a;--line:#d7dee5;--bg:#f5f7f9;--card:#fff;
+        --blue:#1F3864;--warn:#8a5a00;--warnbg:#fff8e6;--bad:#8a1f1f;--badbg:#fdf0f0;
+        --ok:#1f5c3a;--okbg:#eef7f1;}
+  *{box-sizing:border-box}
+  body{margin:0;font:15px/1.6 -apple-system,"Noto Sans TC","Microsoft JhengHei",sans-serif;
+       color:var(--ink);background:var(--bg)}
+  header{background:var(--blue);color:#fff;padding:12px 18px;position:sticky;top:0;z-index:9}
+  header h1{margin:0;font-size:17px;font-weight:600}
+  header .meta{font-size:12px;opacity:.8;margin-top:2px}
+  .banner{background:#eaf0f6;border-bottom:1px solid var(--line);padding:8px 18px;
+          font-size:13px;display:flex;gap:18px;flex-wrap:wrap;align-items:center}
+  .banner b{color:var(--blue)}
+  .banner .none{color:var(--bad)}
+  .banner .dirty{color:var(--warn)}
+  main{max-width:1100px;margin:0 auto;padding:18px}
+  .tabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+  .tabs button{border:1px solid var(--line);background:#fff;padding:11px 16px;border-radius:4px;min-height:44px;
+               cursor:pointer;font-size:14px;color:var(--mut)}
+  .tabs button[aria-selected=true]{background:var(--blue);color:#fff;border-color:var(--blue)}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:6px;
+        padding:16px 18px;margin-bottom:14px}
+  .card h2{margin:0 0 4px;font-size:15px;color:var(--blue)}
+  .card .sub{color:var(--mut);font-size:13px;margin-bottom:12px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
+  label{display:block;font-size:13px;color:var(--mut);margin-bottom:3px}
+  label .req{color:var(--bad)}
+  /* R50：表單元件字級一律 ≥16px。iOS Safari 對 <16px 的表單元件在取得焦點時會自動放大整頁，
+     護理床邊、藥局櫃檯、居家個管訪視都是手機情境，每點一格畫面就跳動一次，
+     直接抵觸「讓不同職類使用者可快速完成填寫」。 */
+  input,select{width:100%;padding:10px 11px;border:1px solid var(--line);border-radius:4px;
+               font-size:16px;line-height:1.35;background:#fff}
+  /* R50：寬表格在窄螢幕會撐開整頁版面。改為各自水平捲動，頁面本體永不橫向捲動。 */
+  .tblwrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .tblwrap table{min-width:520px}
+  @media (max-width:640px){
+    .grid{grid-template-columns:1fr}
+    .tabs button{padding:11px 14px;font-size:15px}
+    button{min-height:44px}
+  }
+  input[type=checkbox]{width:auto;transform:scale(1.2);margin:6px 4px}
+  input:disabled,select:disabled{background:#f0f2f4;color:var(--mut)}
+  .fieldnote{font-size:12px;color:var(--mut);margin-top:3px}
+  .blocked{border-color:#e0b4b4;background:var(--badbg)}
+  .hidden{display:none}
+  .msg{padding:10px 12px;border-radius:4px;font-size:13px;margin:8px 0}
+  .msg.warn{background:var(--warnbg);border:1px solid #e8d5a8;color:var(--warn)}
+  .msg.bad{background:var(--badbg);border:1px solid #e0b4b4;color:var(--bad)}
+  .msg.ok{background:var(--okbg);border:1px solid #bcd9c8;color:var(--ok)}
+  .axes{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px}
+  .axis{border:1px solid var(--line);border-radius:5px;padding:10px 12px;background:#fff}
+  .axis .n{font-size:12px;color:var(--mut)}
+  .axis .v{font-size:15px;font-weight:600;margin-top:2px}
+  .v.ELIGIBLE,.v.RELEASABLE,.v.READY{color:var(--ok)}
+  .v.UNKNOWN{color:var(--warn)}
+  .v.BLOCKED,.v.NOT_ELIGIBLE{color:var(--bad)}
+  .axis ul{margin:6px 0 0;padding-left:16px;font-size:12px;color:var(--mut)}
+  button.act{background:var(--blue);color:#fff;border:0;border-radius:4px;padding:9px 18px;
+             font-size:14px;cursor:pointer}
+  button.act.secondary{background:#fff;color:var(--blue);border:1px solid var(--blue)}
+  button.act:disabled{background:#9aa7b4;cursor:not-allowed}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{border:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top}
+  th{background:#eef2f6;color:var(--blue);font-weight:600}
+  code{background:#eef2f6;padding:1px 5px;border-radius:3px;font-size:12px}
+  .foot{color:var(--mut);font-size:12px;margin-top:20px;line-height:1.8}
+  .who{font-size:13px}
+  .light{display:inline-block;padding:2px 8px;border-radius:10px;font-size:12px;font-weight:600;white-space:nowrap}
+  .light.GREEN{background:#e6f4ea;color:#1e6b3a}.light.YELLOW{background:#fff5d6;color:#8a5a00}
+  .light.RED{background:#fdecec;color:#8a1f1f}.light.INFO{background:#eef2f6;color:#455a6b}
+  details summary{cursor:pointer}
+</style>
+
+<header>
+  <h1>OPAT 門診靜脈抗生素治療平台</h1>
+  <div class="meta">版本 <span id="rel">載入中</span>　<span id="ready">現況查詢中…</span></div>
+</header>
+
+<div class="banner who" id="whoami"><span class="none">身分查詢中…</span></div>
+<div class="banner" id="banner"><span class="none">尚未選定病人與療程</span><span id="dirty"></span></div>
+
+<main>
+  <div class="tabs" id="tabs">
+    <button data-tab="WORK" aria-selected="true">我的工作</button>
+    <button data-tab="PATIENT" aria-selected="false">這位病人</button>
+    <button data-tab="VERDICT" aria-selected="false">這次判定</button>
+    <button data-tab="FORM" aria-selected="false">我要填的</button>
+    <button data-tab="KPI" aria-selected="false">成效指標</button>
+    <button data-tab="STATUS" aria-selected="false">現況與限制</button>
+  </div>
+  <div id="view"></div>
+  <div class="foot" id="foot">
+    這是試辦階段的演練環境（虛擬案例、零病人資料）。系統對多數臨床判定會拒絕出數字——
+    那不是故障，是因為劑量、穩定性、適應症、監測、過敏等主檔尚未由院內填入並簽核。
+    畫面上任何空白欄位都會附上原因。<br>
+    <span id="buildline">Build <code id="bid">—</code></span><span id="selftestlink"></span>
+  </div>
+</main>
+
+<script>
+var STATE = { me:null, roles:[], primary:null, readiness:null, build:null,
+              tab:'WORK', episode_id:'', patient_ref:'', episode:null,
+              screen:null, screenRole:null, values:{}, versions:{}, dirty:false, lastVerdict:null,
+              /* ★ R62 封版輪（R62-UI-NEWEP-01）：本頁於這一次使用中向伺服端取得、尚未儲存之療程編號。
+                 伺服端刻意不區分「查無」與「無範圍授權」（R41），因此剛取號的療程載入時一律回 SCOPE_NOT_GRANTED；
+                 只有畫面自己知道這個號碼是它剛取的——據此給出下一步，不向伺服端多問、不多洩漏任何資訊。 */
+              issuedEpisodes:{} };
+
+function el(id){ return document.getElementById(id); }
+/* R62：只放行 http(s) 網址（畫面上會變成可點的連結；javascript: 等一律不出連結） */
+function safeUrl(u){ var s = String(u == null ? '' : u).trim(); return /^https?:\/\//i.test(s) ? s : ''; }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){
+  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+/* R40（C11-025、UX-003）：所有伺服端呼叫一律經此，失敗時說出發生了什麼、資料還在不在。 */
+function call(onOk, onFail){
+  return google.script.run
+    .withSuccessHandler(onOk)
+    .withFailureHandler(function(e){
+      var msg = '與伺服端連線失敗：' + (e && e.message ? e.message : String(e))
+              + '。你填的內容仍在畫面上，未送出；請稍後再試一次。';
+      var out = el('result') || el('view');
+      if (out) out.insertAdjacentHTML('afterbegin', '<div class="msg bad">' + esc(msg) + '</div>');
+      Array.prototype.forEach.call(document.querySelectorAll('button.act'), function(b){ b.disabled=false; });
+      if (onFail) onFail(e);
+    });
+}
+function msg(kind, html){ return '<div class="msg ' + kind + '">' + html + '</div>'; }
+
+/* ── 啟動：現況、身分、版本 ───────────────────────────────────── */
+function boot(){
+  call(function(r){
+    el('rel').textContent = r.release_id + '（' + r.artifact_version + '）';
+    el('bid').textContent = r.build_id; STATE.build = r.build_id; STATE.server_time = r.server_time;
+    STATE.readiness = r.data;
+    var miss = (r.data && r.data.content_missing) || [];
+    el('ready').textContent = '臨床放行 ' + (r.data ? r.data.clinical_release : '?') + '｜未填主檔 ' + miss.length + ' 張';
+    renderWhoami(r.data);
+    /* 自我測試頁連結只給系統管理員看（adminGate_ 在伺服端仍會擋；這裡只是不誘導一般使用者點） */
+    var dep = (r.data && r.data.deployment) || {};
+    if (dep.is_admin) el('selftestlink').innerHTML = '　自我測試頁：在網址後面加上 <code>?page=selftest</code>';
+    show('WORK');
+  }).apiReadiness();
+}
+
+/* R38：多人使用時，畫面上第一個要看得懂的東西是「系統認為你是誰」。R41：簡化為一句話＋原因。 */
+function renderWhoami(d){
+  var w = el('whoami');
+  var dep = (d && d.deployment) || {}, ig = (d && d.integrity) || {};
+  STATE.me = dep;
+  if (!dep.identity_ok || !dep.role) {
+    w.innerHTML = '<span class="none"><b>目前無法確認你是誰，因此只能看、不能存。</b> '
+      + esc(dep.identity_reason || dep.role_reason || '原因未回報') + '</span>';
+  } else {
+    w.innerHTML = '<span><b>你是</b> ' + esc(dep.actor_id) + '（' + esc(dep.role) + '）</span>';
+  }
+  if (ig && ig.allowed === false)
+    w.innerHTML += '<span class="none"><b>試算表完整性異常：</b>' + esc((ig.reasons || []).join('；')) + '</span>';
+}
+/* C11-002：病人橫幅以伺服端 patientBanner_ 之 identifiers 為準（試算回傳 banner）；尚未取得伺服端結果前只顯示「待伺服端確認」 */
+function renderBanner(){
+  var b = el('banner'), sb = STATE.serverBanner;
+  if (!STATE.episode_id || !STATE.patient_ref) {
+    b.innerHTML = '<span class="none">尚未選定病人與療程</span><span id="dirty"></span>'; }
+  else if (sb && sb.identifiers && sb.identifiers.length) {
+    b.innerHTML = sb.identifiers.map(function(x){ return '<span><b>' + esc(x.label) + '</b> ' + esc(x.value) + '</span>'; }).join('')
+      + (sb.status !== 'OK' ? '<span class="none">識別項不足（' + esc(sb.status) + '）</span>' : '')
+      + '<span style="color:#8a5a00">演練環境・虛擬案例・零病人資料</span><span id="dirty"></span>'; }
+  else {
+    b.innerHTML = '<span><b>病人</b> ' + esc(STATE.patient_ref) + '</span><span><b>療程</b> ' + esc(STATE.episode_id) + '</span>'
+      + '<span class="fieldnote">（識別待伺服端試算確認）</span><span id="dirty"></span>'; }
+  renderDirty();
+}
+function renderDirty(){ var d = el('dirty'); if (d) d.innerHTML = STATE.dirty ? '<span class="dirty"><b>有未儲存的變更</b></span>' : ''; }
+window.addEventListener('beforeunload', function(e){ if (STATE.dirty) { e.preventDefault(); e.returnValue = ''; } });
+
+/* ── 分頁 ───────────────────────────────────────────────────────── */
+function show(tab){
+  if (STATE.dirty && tab !== STATE.tab && STATE.tab === 'FORM'
+      && !window.confirm('這一頁有未儲存的變更。離開會保留在畫面記憶中，但尚未送出。要離開嗎？')) return;
+  STATE.tab = tab;
+  Array.prototype.forEach.call(el('tabs').querySelectorAll('button'), function(x){
+    x.setAttribute('aria-selected', x.getAttribute('data-tab')===tab ? 'true':'false'); });
+  el('view').innerHTML = '<div class="card"><div class="sub">載入中…</div></div>';
+  if (tab === 'WORK') return renderWork();
+  if (tab === 'PATIENT') return renderPatient();
+  if (tab === 'VERDICT') return renderVerdict();
+  if (tab === 'FORM') return renderFormTab();
+  if (tab === 'KPI') return renderKpi();
+  if (tab === 'STATUS') return renderStatus();
+}
+el('tabs').addEventListener('click', function(e){
+  var b = e.target.closest('button'); if(!b) return; show(b.getAttribute('data-tab')); });
+
+/* ── 我的工作 ──────────────────────────────────────────────────── */
+/* R43／O-96：畫面上不出現裸代碼。中文在前、代碼在括號內——
+   臨床端讀得懂，資訊室仍查得到是哪一個代碼；兩者都需要，所以兩者都留。
+   對照表不在這裡「判定」任何事，只負責把系統狀態翻成人話。 */
+var ZH_STATUS = { ELIGIBLE:'可執行', RELEASABLE:'可放行', READY:'齊備', NOT_ELIGIBLE:'不符合',
+                  UNKNOWN:'尚未判定', BLOCKED:'不通過', NOT_AUTHORIZED:'規則未核准',
+                  HOLD:'暫停', ALLOW:'可執行', PENDING:'待處理', OK:'完成',
+                  /* R61／N26：TDM 計算之狀態 */
+                  POLICY_NOT_READY:'政策未就緒', INPUT_INCOMPLETE:'輸入不完整', NOT_STEADY_STATE:'未達穩定狀態',
+                  RENAL_NOT_CONFIRMED:'腎功能變化未確認', TARGET_NOT_APPLICABLE:'目標不適用', IN_TARGET:'在目標內',
+                  ADJUST_SUGGESTED:'建議調整（計算值）',
+                  /* R51：成效指標之狀態碼走同一個中文化出口（G122）——
+                     另建一份對照表就會有一份忘記維護。 */
+                  NO_REGISTRY:'尚未定義任何指標', NOT_FOUND:'查無此指標',
+                  SPEC_INCOMPLETE:'指標定義不完整', BAD_CONDITION:'條件寫法看不懂',
+                  STORE_UNAVAILABLE:'儲存層未接上', NO_DATA:'來源尚無任何紀錄',
+                  EMPTY_DENOMINATOR:'沒有人落進分母' };
+var ZH_BLOCK = {
+  REREVIEW_REQUIRED:'系統覆核有「需處理」項目，須由藥師對目前這一版具名再覆核（同意須附理由）後才可放行',
+  PHARMACIST_DISAGREED:'藥師再覆核不同意，待醫師修改處方後重新覆核',
+  DOSE_REVIEW_INCOMPLETE:'每日劑量尚未完成系統審核（年齡、性別、身高、體重、肌酸酐與採檢日、透析狀態須齊備）',
+  DOSE_REVIEW_REQUIRES_EPISODE:'劑量審核不在範圍內，且未指定療程，無從對應藥師再覆核',
+  IDENTITY_UNTRUSTED:'系統無法確認你的身分（人員名冊尚未匯入或你不在名冊上）',
+  ACTION_NOT_AUTHORIZED:'這個動作尚未被授權',
+  SCOPE_NOT_GRANTED:'你對這個療程沒有範圍授權',
+  FIELD_NOT_WRITABLE_BY_ROLE:'這些欄位不屬於你的職類',
+  ENTITY_NOT_ALLOWED:'這一組欄位的落點不合法',
+  EPISODE_NOT_FOUND:'儲存層查無這個療程',
+  EPISODE_RETRACTED:'這個療程的現行紀錄已撤回',
+  PLAN_NOT_FOUND:'儲存層查無這個計畫',
+  INPUT_INCOMPLETE:'必要資料還沒填齊',
+  RESULT_REF_INVALID:'結果參照不是這個療程的已落盤紀錄',
+  SCREEN_NOT_FOR_ROLE:'這個畫面不屬於你的角色',
+  SCREEN_ROLE_UNKNOWN:'系統還不知道你的畫面角色（職類尚未對應）',
+  TASK_ID_REQUIRED:'請先選一件要做的事',
+  TASK_NOT_DECLARED:'這個任務尚未被宣告',
+  TASK_NOT_FOR_ROLE:'這個任務不屬於你的職類',
+  TASK_NOT_IN_VISIBILITY_MATRIX:'這個任務還沒有逐欄裁決可見性',
+  TASK_NOT_AUTHORIZED_FOR_ACTOR:'你的畫面角色不含這一個任務',
+  STORE_INTEGRITY:'試算表被人繞過系統改動過，已停止寫入',
+  ADMIN_ONLY:'這一頁只開放給維運人員',
+  VERSION_CONFLICT:'有人在你之前存過了，請重新載入再存',
+  DUPLICATE_IGNORED:'這一筆先前已經存過，沒有再存一次',
+  HANDOFF_NOT_RECEIVER_ROLE:'只有指定的接手角色可以執行這一步',
+  HANDOFF_NO_RESULT:'還沒有結果參照，不能結案',
+  HANDOFF_ALREADY_OPEN:'這件交班還沒結案，不能重複提出',
+  HANDOFF_ILLEGAL_TRANSITION:'目前狀態不能轉到這一步',
+  HANDOFF_REASON_REQUIRED:'拒接必須附理由代碼',
+  HANDOFF_RESULT_REF_REQUIRED:'記結果必須附結果參照',
+  HANDOFF_NO_HANDOFF:'目前沒有可以執行這個動作的交班',
+  HANDOFF_NOT_PARTY:'只有提出者或接手角色可以結案',
+  HANDOFF_CODE_NOT_IN_TABLE:'交班任務代碼不在表上',
+  HANDOFF_NOT_AUTHORIZED:'交班任務代碼尚未經四要件核准',
+  HANDOFF_EMPTY_SOURCE:'交班任務表還沒有任何一列',
+  /* ★ R60／K0：送出治療計畫與稽核軌調閱之阻斷碼 */
+  PLAN_NOT_FOUND:'這個療程還沒有治療計畫，無從送出',
+  PLAN_INCOMPLETE:'計畫尚未完整，不得送出',
+  SAVE_BLOCKED:'寫入被擋下（詳見下方理由）',
+  ROLE_NOT_ALLOWED:'你的職類沒有這個權限',
+  SCOPE_NOT_GRANTED:'你對這個療程沒有範圍授權',
+  STORE_NOT_READY:'儲存層尚未就緒',
+  ACCESS_NOT_RECORDED:'調閱紀錄寫不進去，因此不顯示稽核軌',
+  AUDIT_READ_ROLE_NOT_ALLOWED:'你的職類不能調閱稽核軌',
+  AUDIT_READ_SCOPE_NOT_GRANTED:'你對這個療程沒有範圍授權，不能調閱'
+};
+function zhStatus(c){ c = String(c || ''); return c ? (ZH_STATUS[c] ? ZH_STATUS[c] + '（' + c + '）' : c) : ''; }
+function zhBlock(c){ c = String(c || ''); return c ? (ZH_BLOCK[c] ? ZH_BLOCK[c] + '（代碼 ' + c + '）' : c) : ''; }
+var AXIS_NAME = { Clinical_Prescribable:'醫師可否開立', Technical_Releasable:'藥師可否放行',
+                  NHI_Eligible:'健保給付資格', Claim_Ready:'申報就緒', EPISODE:'收案背景', INFECTION:'感染事實' };
+function renderWork(){
+  call(function(r){
+    var d = r.data || {};
+    if (!r.ok || d.state === 'BLOCKED') { el('view').innerHTML = msg('bad', '<b>無法取得工作清單。</b> ' + esc(d.reason || r.error || '')); return; }
+    STATE.roles = (d.identity && d.identity.roles) || []; STATE.primary = STATE.roles[0] || null;
+    var h = '<div class="card"><h2>我的工作</h2><div class="sub">只列出你有範圍授權的療程；每一列只寫「缺什麼、輪到你補的」。'
+          + '沒有列出的療程不代表不存在，代表你沒有它的授權（_DB_GRANT）。</div>';
+    /* R56：不再提供任何可以打代號的輸入框。療程識別與病人代號都由伺服端產生，
+       病人一律從授權清單挑選——打字這個動作本身就是撞號、打錯與輸入 PHI 的來源。 */
+    h += '<div style="margin-bottom:10px"><label>新增療程</label>'
+       + '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">'
+       + '<button class="act" id="newep">新增療程</button>'
+       + (STATE.primary === 'MD' ? '<button class="act" id="mdintake">醫師收案：建立療程</button>' : '')
+       + '<span class="fieldnote" id="newep_note">療程識別由系統產生（EP-YYYYMMDD-NNN），不需輸入</span>'
+       + '</div><div id="newep_box"></div></div>';
+    if (!d.items || !d.items.length) h += msg('warn', '目前沒有任何你有授權的療程。');
+    else {
+      h += '<div class=\"tblwrap\"><table><tr><th>療程</th><th>病人</th><th>四軸</th><th>輪到我補的</th><th></th></tr>';
+      d.items.forEach(function(it){
+        var ax = it.axes || {};
+        h += '<tr><td>' + esc(it.episode_id) + '</td><td>' + esc(it.patient_ref || '—') + '</td><td>'
+           + Object.keys(ax).map(function(k){ return '<span class="v ' + esc(ax[k]) + '">' + esc(AXIS_NAME[k]||k) + '：' + esc(zhStatus(ax[k])) + '</span>'; }).join('<br>')
+           + '</td><td>' + (it.my_missing.length ? it.my_missing.map(function(m){ return '・' + esc(m.label||m.key) + '<span class="fieldnote">' + esc(m.why||'') + '</span>'; }).join('') : '<span style="color:var(--ok)">沒有輪到你的缺項</span>')
+           + '</td><td><button class="act secondary" data-open="' + esc(it.episode_id) + '" data-pr="' + esc(it.patient_ref||'') + '">開啟</button></td></tr>';
+      });
+      h += '</table></div>';
+    }
+    h += '</div>';
+    h += renderReminders(d.reminders);
+    h += renderHandoffs(d.handoffs || [], '待我接手或我提出而未結案的交班');
+    el('view').innerHTML = h;
+    bindHandoffButtons();
+    el('newep').addEventListener('click', openNewEpisodePanel);
+    if (el('mdintake')) el('mdintake').addEventListener('click', openPhysicianIntake);
+    Array.prototype.forEach.call(el('view').querySelectorAll('[data-open]'), function(b){
+      b.addEventListener('click', function(){ openEpisode(b.getAttribute('data-open'), b.getAttribute('data-pr')); }); });
+  }).apiWorklist();
+}
+/* ★ R61／N27：站內提醒。伺服端即時計算，不寄信、不寫入；未啟用之提醒種類照實列出，不以空白代表沒事。 */
+var RM_NAME = { MONITORING_DUE:'監測到期', MONITORING_NOT_ENABLED:'監測未啟用', COURSE_END:'療程將結束',
+                GRANT_EXPIRING:'授權將到期', COMPETENCY_EXPIRING:'能力認證將到期' };
+function renderReminders(rm){
+  if (!rm) return '';
+  var h = '<div class="card"><h2>提醒（' + esc((rm.items || []).length) + '）</h2><div class="sub">每次開啟「我的工作」時由系統即時計算；不寄信、不推播。</div>';
+  if (!(rm.items || []).length) h += '<div class="fieldnote">目前沒有已啟用種類之提醒。</div>';
+  else {
+    h += '<div class="tblwrap"><table><tr><th>種類</th><th>療程</th><th>內容</th><th>日期</th><th></th></tr>';
+    rm.items.forEach(function(x){
+      h += '<tr><td>' + esc(RM_NAME[x.type] || x.type) + '</td><td>' + esc(x.episode_id || '—') + '</td><td>' + esc(x.text) + '</td><td>' + esc(x.due_date || '') + '</td><td>'
+         + (x.episode_id ? '<button class="act secondary" data-open="' + esc(x.episode_id) + '" data-pr="">開啟</button>' : '') + '</td></tr>';
+    });
+    h += '</table></div>';
+  }
+  if ((rm.disabled_types || []).length)
+    h += '<div class="fieldnote">尚未啟用之提醒種類（院方未核准，不會產生提醒）：' + esc(rm.disabled_types.map(function(t){ return RM_NAME[t] || t; }).join('、')) + '</div>';
+  return h + '</div>';
+}
+/* R56：新增療程。三件事全部由伺服端決定，畫面只負責讓人選：
+   ① 療程識別（EP-YYYYMMDD-NNN）② 病人從授權清單挑 ③ 收新病人時代號也由伺服端產生。
+   前端不自行造號、不接受自由輸入，因此不存在「打錯」與「打進 PHI」這兩條路徑。 */
+function openNewEpisodePanel(){
+  var box = el('newep_box');
+  box.innerHTML = '<div class="fieldnote">正在向伺服端取號…</div>';
+  call(function(r){
+    var d = r.data || {};
+    if (!r.ok || d.state !== 'OK') {
+      box.innerHTML = msg('bad', '<b>無法新增療程。</b> ' + esc(zhBlock(d.blocked_by) || d.reason || r.error || ''));
+      return;
+    }
+    if (d.episode_id) STATE.issuedEpisodes[String(d.episode_id)] = true;
+    var opts = (d.patients || []).map(function(p){
+      return '<option value="' + esc(p.patient_ref) + '">' + esc(p.patient_ref)
+           + (p.episodes && p.episodes.length ? '（既有療程 ' + p.episodes.length + ' 筆）' : '') + '</option>';
+    }).join('');
+    var h = '<div class="card" style="margin-top:8px"><h2>新增療程</h2>'
+      + '<div class="sub">療程識別由系統產生，病人請從你有授權的清單挑選。'
+      + '這兩個欄位都不提供輸入框——避免療程撞號、挑錯病人，以及把可識別個人資料打進系統。</div>'
+      + '<div style="margin:8px 0"><label>療程識別（系統產生）</label>'
+      + '<div><b id="ne_ep">' + esc(d.episode_id) + '</b> '
+      + '<span class="fieldnote">唯一性由寫入時的版本比對保證；同時有人取到同一個號碼時，第二筆會被擋下而不是兩筆都寫進去。</span></div></div>'
+      + '<div style="margin:8px 0"><label>病人</label>'
+      + '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">'
+      + (opts
+          ? '<select id="ne_pr">' + opts + '</select><span class="fieldnote">只列出你有範圍授權的病人</span>'
+          : '<span class="fieldnote">你目前沒有任何已授權的病人，請直接收新病人。</span>')
+      + '</div></div>'
+      + '<div style="margin:8px 0"><label>或收新病人</label>'
+      + '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">'
+      + '<button class="act secondary" id="ne_newpt">收新病人（代號 ' + esc(d.suggested_patient_ref || '') + '）</button>'
+      + '<span class="fieldnote">代號由系統產生。本平台不儲存代號與真實病人之對照，對照屬院內作業。</span>'
+      + '</div></div>'
+      + '<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">'
+      + (opts ? '<button class="act" id="ne_go">用選定的病人開始</button>' : '')
+      + '<button class="act secondary" id="ne_cancel">取消</button></div>'
+      + '<div class="fieldnote" style="margin-top:8px">'
+      + (d.notes || []).map(function(n){ return '・' + esc(n); }).join('<br>') + '</div>'
+      + '</div>';
+    box.innerHTML = h;
+    if (el('ne_go')) el('ne_go').addEventListener('click', function(){
+      openEpisode(d.episode_id, el('ne_pr').value); });
+    el('ne_newpt').addEventListener('click', function(){
+      openEpisode(d.episode_id, d.suggested_patient_ref); });
+    el('ne_cancel').addEventListener('click', function(){ box.innerHTML = ''; });
+  })['apiNewEpisode']({});
+}
+
+/* R44／NEG-ID-02：一個函式清空所有與「這位病人」有關的狀態；新增狀態時只要加在這裡。 */
+function clearPatientState(){
+  STATE.values = {}; STATE.episode = null; STATE.versions = {}; STATE.serverBanner = null;
+  STATE.acks = {}; STATE.reconfirm = null; STATE.dirty = false; STATE.timeline = null; STATE.handoffs = null;
+  var f = el('form'); if (f) f.innerHTML = '';
+  var rr = el('result'); if (rr) rr.innerHTML = '';
+}
+
+function openEpisode(ep, pr){
+  if (!ep || !pr) { el('view').insertAdjacentHTML('afterbegin',
+    msg('bad', '缺療程識別或病人代號。請從清單開啟，或按「新增療程」由系統產生。')); return; }
+  /* R44／NEG-ID-02：切換病人時把上一位病人的每一項畫面狀態清掉。
+     殘留一格就足以讓人把 A 的數值當成 B 的——這是最典型的錯誤病人事故起點。 */
+  clearPatientState();
+  STATE.episode_id = ep; STATE.patient_ref = pr;
+  renderBanner(); show('PATIENT');
+}
+
+/* R44／NEG-EMR-01：任何面向病人或蒐集病人回饋的畫面，都必須明說「這裡不是急症管道」。
+   審查指出的失效形態很具體：病人用回饋問卷回報嚴重症狀，而那條路徑上沒有人在看。 */
+function emergencyNotice(){
+  return '<div class="msg bad" role="alert" style="font-weight:600">本頁為非急症管道（不是急診，也不會有人即時看到）。'
+       + '如果出現發燒、畏寒、呼吸困難、意識改變、注射部位紅腫熱痛或滲液等狀況，'
+       + '請立刻依照你的 OPAT 聯絡卡撥打 24 小時緊急聯絡電話；情況危急時直接前往急診或撥打 119（緊急醫療路徑）。'
+       + '本頁填寫的內容不會即時被人看到。</div>';
+}
+
+/* ── 這位病人 ──────────────────────────────────────────────────── */
+function renderPatient(){
+  if (!STATE.episode_id) { el('view').innerHTML = msg('warn', '尚未選定病人與療程。請到「我的工作」開啟或輸入。'); return; }
+  var _emr = emergencyNotice();
+  call(function(r){
+    var d = r.data || {};
+    if (!r.ok) { el('view').innerHTML = msg('bad', '載入失敗：' + esc(r.error)); return; }
+    if (d.state === 'BLOCKED') {
+      var why = d.blocked_by === 'EPISODE_NOT_FOUND' ? (d.retracted ? '此療程之現行紀錄已撤回（RETRACTS）；系統不回舊值。' : '儲存層沒有這個療程。若是新病人，請到「我要填的」建立第一筆並儲存。')
+              : d.blocked_by === 'SCOPE_NOT_GRANTED' ? '你對這個療程沒有範圍授權，因此不顯示任何內容。' : (d.reason || zhBlock(d.blocked_by));
+      var _fresh = d.blocked_by === 'SCOPE_NOT_GRANTED' && STATE.issuedEpisodes[String(STATE.episode_id)];
+      if (_fresh) why = '這是你剛取得、尚未儲存的療程編號：儲存層沒有這個療程。若是新病人，請到「我要填的」建立第一筆並儲存。';
+      el('view').innerHTML = msg(_fresh ? 'warn' : 'bad', esc(why));
+      if (d.blocked_by === 'EPISODE_NOT_FOUND' || _fresh) el('view').innerHTML += msg('warn', '建立療程之後，建立者會自動取得該療程之範圍授權。');
+      return;
+    }
+    STATE.episode = d;
+    if (d.plan) STATE.versions.PLAN = d.plan.record_version;
+    /* R50：衍生顯示欄（CrCl、系統警示、處方摘要、標籤使用期限）由伺服端算好後投影進來。
+       這些鍵不是可寫欄位——畫面對 DERIVED 一律 disabled，儲存時 querySelector 也排除 disabled，
+       因此不會被送回伺服端。 */
+    if (d.episode) STATE.values = Object.assign({}, d.plan ? d.plan.payload : {}, d.episode,
+                                                (d.state && d.state.derived_display) || {});
+    var st = d.state || {};
+    var h = _emr + renderAxes(st.axes, st.missing_by_axis);
+    /* R61／N16：療法組合建議（唯讀；須醫師確認，不寫入處方欄）。 */
+    var _rs = (st.derived_display || {}).regimen_suggestion;
+    if (_rs) h += renderRegimenSuggestion(_rs);
+    var f = d.facts || {};
+    h += '<div class="card"><h2>療程事實（病人層）</h2><div class="sub">由建立療程時之伺服端身分與各職類填寫；計畫改版不改變這些事實。</div><div class=\"tblwrap\"><table>';
+    /* R50：原本只列六組，eligibility（收案關卡）、allergy（六因子判定）、lifecycle（療程狀態）
+       三組計算完之後沒有任何畫面呈現路徑——算了給誰看？ */
+    ['context','infection','regimen','eligibility','allergy','lifecycle','consent','response','contacts'].forEach(function(g){
+      var o = f[g] || {}; Object.keys(o).forEach(function(k){
+        if (/_source$|_source_note$|_domain$/.test(k)) return;   /* 來源註記另行呈現 */
+        /* R53：「還沒有人填」與「還沒有地方可以填」要分得出來。
+           前者是待辦，後者是未施工——顯示成同一句「未填」等於把未施工說成待辦。 */
+        var notBuilt = (o[k + '_source'] === 'NOT_BUILT') || (o[k] == null && o[k + '_source'] === 'NOT_BUILT');
+        var srcKey = k.replace(/_status$/, '') + '_source';
+        var nb = (o[srcKey] === 'NOT_BUILT');
+        var cell = (o[k] != null) ? esc(o[k])
+          : (nb ? '<span class="fieldnote">尚無寫入路徑（未施工）</span>'
+                : '<span class="fieldnote">未填</span>');
+        var note = nb && o[srcKey + '_note'] ? '<div class="fieldnote">' + esc(o[srcKey + '_note']) + '</div>' : '';
+        h += '<tr><td>' + esc(k) + '</td><td>' + cell + note + '</td></tr>'; }); });
+    h += '</table></div>';
+    if (f.conditional_missing && f.conditional_missing.length)
+      h += msg('warn', '<b>前提成立但尚未填的欄位：</b><br>' + f.conditional_missing.map(function(m){ return '・' + esc(m.key) + '：' + esc(m.why); }).join('<br>'));
+    if (f.inconsistencies && f.inconsistencies.length)
+      h += msg('bad', '<b>彼此不一致：</b><br>' + f.inconsistencies.map(function(m){ return '・' + esc(m.why); }).join('<br>'));
+    if (d.administration_route) h += '<div class="sub">給藥路徑：' + esc(d.administration_route.status === 'OK' ? (d.administration_route.route + '（' + d.administration_route.action_id + '）') : d.administration_route.reason) + '</div>';
+    if (d.contacts && d.contacts.applies) h += (d.contacts.ready ? msg('ok', '居家聯絡窗口與返院動線已填。') : msg('warn', '居家給藥尚缺：' + d.contacts.missing.map(function(m){ return esc(m.key); }).join('、')));
+    if (d.outcome) h += '<div class="sub">成果：' + esc(d.outcome.evaluable ? '可評價' : d.outcome.reason) + '</div>';
+    /* R50：療程暫停／恢復／停止。courseControl_ 自 R47 就寫好且有測試，
+       但沒有任何 api 入口、也沒有任何按鈕——能力存在而使用者到不了。 */
+    var _cs = (f.lifecycle && f.lifecycle.clinical_course_status) || null;
+    h += '<div class="card"><h2>療程控制</h2><div class="sub">目前狀態：'
+       + (_cs ? esc(_cs) : '<span class="fieldnote">尚未設定</span>')
+       + '。狀態只能由此變更；直接改欄位不會生效（欄位層授權已擋）。變更一律需要理由代碼。</div>'
+       + ['PAUSE','RESUME','STOP','COMPLETE'].map(function(a){
+           return '<button class="act secondary" data-cc="' + a + '" style="margin:0 6px 6px 0">'
+                + esc({PAUSE:'暫停',RESUME:'恢復',STOP:'停止',COMPLETE:'結案'}[a]) + '</button>'; }).join('')
+       + '<div id="ccbox"></div></div>';
+    /* R50：apiTeachingCards 在伺服端完整可用，app.html 全文對它的呼叫是 0。 */
+    h += '<div class="card"><h2>教學卡片</h2><div class="sub">依已核准可顯示之警示與體積契約產生；未核准顯示者不出文字。</div>'
+       + '<button class="act secondary" id="tcbtn">載入教學卡片</button><div id="tcbox"></div></div>';
+    h += '</div>';
+    /* ★ R61／N26：Vancomycin 連續輸注 TDM 計算（只計算、不寫入處方）。僅在本療程成分為 vancomycin 時出現。 */
+    if (String(STATE.values.ingredient_id || '') === 'ING-VAN') h += vancoTdmCard();
+    /* ★ R61／N29：病人衛教單（工作人員列印交付；病人不直接開網頁） */
+    h += '<div class="card"><h2>病人衛教單</h2><div class="sub">由系統依本療程成分與裝置組成；未核准之內容或未設定 24 小時聯絡電話時，'
+       + '只能以「草案預覽」列印（帶浮水印，不得交付病人）。單張只含去識別代號。</div>'
+       + '<button class="act secondary" id="hobtn">產生衛教單</button><div id="hobox"></div></div>';
+    h += '<div class="card"><h2>計畫</h2><div class="sub">' + (d.plan ? ('現行第 ' + esc(d.plan.record_version) + ' 版') : '此療程尚無計畫') + '</div>'
+       + (d.plan ? '<button class="act secondary" id="newdraft">同病人開新計畫（依帶入政策預帶）</button>' : '') + '</div>';
+    /* ★ R60／K0：送出治療計畫（ACT-02）。
+       在本輪之前醫師端只有「建立或編輯」（ACT-01）——也就是說「送出」這個
+       臨床決定在系統裡不存在，藥師覆核的其實是一份還在編輯中的計畫。
+       送出後上游一變即失效（SUPERSEDED），下游必須看得出來。 */
+    if (d.plan) {
+      var _ps = d.plan_submission || null;
+      h += '<div class="card"><h2>送出治療計畫</h2><div class="sub">'
+         + '送出之後進入藥師覆核；上游（成分、劑量、頻次、療程天數、起日、裝置、品項）'
+         + '一變，原送出即失效，必須重新送出。撤回需填理由代碼。</div>'
+         + '<div class="sub">目前：<b id="psstate">'
+         + esc(_ps ? _ps.state : '查詢中…') + '</b></div>'
+         + '<button class="act" id="psbtn">送出治療計畫</button>'
+         + '<button class="act secondary" id="pswbtn" style="margin-left:6px">撤回</button>'
+         + '<div id="psbox"></div></div>';
+    }
+    /* R42／DQ-R42-02：提出交班 */
+    h += '<div class="card"><h2>交班（責任轉移）</h2><div class="sub">提出→接受→進行→結果→結案；每一步的人與時間由伺服端記。時間線上有資料不等於責任已轉移。</div>'
+       + '<div style="display:flex;gap:8px;flex-wrap:wrap"><input id="ho_task" placeholder="任務代碼（19_選項_交班任務）" style="max-width:260px"><button class="act secondary" data-ho="OFFER">提出交班</button></div>'
+       + renderHandoffs(d.handoffs || [], '此療程之交班') + '</div>';
+    /* ★ R60／K0：稽核軌調閱（ACT-15）。
+       時間線記的是臨床事件，稽核軌記的是操作——兩者不同，因此另設一張卡。
+       畫面只依身分決定要不要顯示入口；能不能看仍由伺服端 _RBAC 與範圍授權判定。 */
+    h += '<div class="card"><h2>稽核軌調閱</h2><div class="sub">'
+       + '唯讀。★ 這個動作本身也會留痕：誰、什麼時候、看了哪一個療程、回了幾筆。'
+       + '沒有調閱職類或沒有此療程範圍授權者，按下去會被伺服端擋下。</div>'
+       + '<button class="act secondary" id="audbtn">調閱此療程之稽核軌</button>'
+       + '<div id="audbox"></div></div>';
+    /* R42／DQ-R42-03：時間線唯讀投影 */
+    var tl = d.timeline || { events: [] };
+    h += '<div class="card"><h2>時間線（唯讀投影）</h2><div class="sub">每一筆是儲存層的一個版本；更正與撤回以新紀錄連回原紀錄，原紀錄保留並標示。稽核軌不在此（那記的是操作，不是臨床事件）。</div>';
+    if (!tl.events.length) h += '<div class="fieldnote">尚無紀錄</div>';
+    else { h += '<div class=\"tblwrap\"><table><tr><th>#</th><th>時間（伺服端）</th><th>實體</th><th>版</th><th>關係</th><th>誰</th><th>改了哪些欄</th><th>狀態</th></tr>';
+      tl.events.forEach(function(e){ h += '<tr><td>' + esc(e.seq) + '</td><td>' + esc(e.saved_at||'') + '</td><td>' + esc(e.entity) + '</td><td>' + esc(e.record_version) + '</td><td>' + esc(e.relation) + (e.corrects_record_id ? '→' + esc(e.corrects_record_id) : '') + '</td><td>' + esc(e.actor_id||'') + '（' + esc(e.actor_role||'') + '）</td><td>' + esc((e.fields_changed||[]).join('、')) + '</td><td>' + (e.retracted_by ? '已撤回' : (e.corrected_by ? '已被更正' : '')) + '</td></tr>'; });
+      h += '</table></div>'; }
+    h += '</div>';
+    /* ★ R60／L8：署名（Attribution）。
+       CC BY-NC 與政府資料開放授權條款都把姓名標示寫成義務，未標示即失去授權。
+       ★ 這一塊不是說明文字，是授權義務的履行——所以它渲染在畫面上，
+         而不是只寫在一張登記表裡。 */
+    h += '<div class="card"><h2>資料來源與授權標示</h2><div class="sub">'
+       + '本平台之判定依據所引用之來源，其授權要求之出處標示如下。'
+       + '★ 未標示出處即失去授權，因此本區塊不得被移除。</div>'
+       + '<div id="attrbox" class="fieldnote">載入中…</div></div>';
+    el('view').innerHTML = h;
+    renderAttribution();
+    bindCourseControl();
+    bindTeachingCards();
+    bindVancoTdm();
+    if (el('hobtn')) el('hobtn').addEventListener('click', doHandout);
+    bindHandoffButtons();
+    var nd = el('newdraft'); if (nd) nd.addEventListener('click', newDraft);
+    /* ★ R60／K0：送出／撤回治療計畫、稽核軌調閱 */
+    if (el('psbtn')) el('psbtn').addEventListener('click', function(){ doSubmitPlan('SUBMIT'); });
+    if (el('pswbtn')) el('pswbtn').addEventListener('click', openWithdrawPanel);
+    if (el('audbtn')) el('audbtn').addEventListener('click', doAuditTrail);
+    /* ★ R62：四軸缺項、調製後安定性提示、系統覆核與藥師再覆核、醫師結案 */
+    renderR62Patient();
+  }).apiLoadEpisode({ episode_id: STATE.episode_id });
+}
+/* ★ R61／N26：Vancomycin 連續輸注 TDM 卡。輸入只用數字與下拉；結果不寫入任何欄位。 */
+function vancoTdmCard(){
+  var v = STATE.values || {};
+  return '<div class="card"><h2>Vancomycin 連續輸注 TDM 計算</h2><div class="sub">'
+    + '只計算、不寫入處方；調整劑量須由醫師開立。規則讀自 160_TDM政策（依據見「資料來源與授權標示」）。</div>'
+    + '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">'
+    + '<div><label>血中濃度（mg/L）</label><input type="number" step="0.1" min="0" id="vt_css"></div>'
+    + '<div><label>距開始或上次調速（小時）</label><input type="number" step="1" min="0" id="vt_hrs"></div>'
+    + '<div><label>目前每日劑量（mg）</label><input type="number" step="10" min="0" id="vt_cur" value="' + esc(v.daily_dose != null ? v.daily_dose : '') + '"></div>'
+    + '<div><label>體重（kg）</label><input type="number" step="0.1" min="0" id="vt_wt" value="' + esc(v.weight_kg != null ? v.weight_kg : '') + '"></div>'
+    + '<div><label>菌種與 MIC</label><select id="vt_scope"><option value="">請選擇</option>'
+    + '<option value="MRSA_MIC_LE_1">MRSA，vancomycin MIC ≤1 mg/L</option>'
+    + '<option value="OTHER_OR_UNKNOWN">其他菌種，或 MIC 未知／&gt;1</option></select></div>'
+    + '<div><label>採血後腎功能無變化</label><select id="vt_renal"><option value="">請選擇</option>'
+    + '<option value="TRUE">已確認無變化</option><option value="FALSE">有變化或未確認</option></select></div>'
+    + '<button class="act secondary" id="vt_go">計算</button></div><div id="vt_box"></div></div>';
+}
+function bindVancoTdm(){
+  var b = el('vt_go'); if (!b) return;
+  b.addEventListener('click', function(){
+    el('vt_box').innerHTML = '<div class="fieldnote">計算中…</div>';
+    call(function(r){
+      var d = r.data || {};
+      if (!r.ok || d.state !== 'OK') { el('vt_box').innerHTML = msg('bad', esc((d && (d.reason || zhBlock(d.blocked_by))) || r.error || '無法計算')); return; }
+      var h = '<div class="sub">狀態：<b>' + esc(zhStatus(d.status)) + '</b></div>';
+      if (d.auc24 != null) h += '<div>AUC24（Css×24）：<b>' + esc(d.auc24) + '</b> mg·h/L</div>';
+      if (d.target) h += '<div>目標：Css ' + esc(d.target.css_low) + '–' + esc(d.target.css_high) + ' mg/L（AUC ' + esc(d.target.auc_low) + '–' + esc(d.target.auc_high) + '）</div>';
+      if (d.current_mg_kg_day != null) h += '<div>目前：' + esc(d.current_mg_kg_day) + ' mg/kg/日</div>';
+      if (d.suggested_daily_mg) h += '<div>換算每日劑量：<b>' + esc(d.suggested_daily_mg.low) + '–' + esc(d.suggested_daily_mg.high) + ' mg</b>（每小時 '
+        + esc(d.suggested_rate_mg_h.low) + '–' + esc(d.suggested_rate_mg_h.high) + ' mg'
+        + (d.suggested_mg_kg_day ? '；' + esc(d.suggested_mg_kg_day.low) + '–' + esc(d.suggested_mg_kg_day.high) + ' mg/kg/日' : '') + '）</div>';
+      (d.reasons || []).forEach(function(x){ h += '<div class="fieldnote">・' + esc(x) + '</div>'; });
+      if ((d.warnings || []).length) h += '<div class="fieldnote">警示碼：' + esc(d.warnings.join('、')) + '</div>';
+      el('vt_box').innerHTML = h;
+    })['apiVancoTdm']({ episode_id: STATE.episode_id, css_mg_L: el('vt_css').value, hours_since_start_or_change: el('vt_hrs').value,
+                        current_daily_mg: el('vt_cur').value, weight_kg: el('vt_wt').value, target_scope: el('vt_scope').value || null,
+                        renal_unchanged_confirmed: el('vt_renal').value === 'TRUE' });
+  });
+}
+/* ★ R61／N29：病人衛教單。列印時只印 #printarea（見 @media print）。 */
+function doHandout(){
+  el('hobox').innerHTML = '<div class="fieldnote">產生中…</div>';
+  call(function(r){
+    var d = r.data || {};
+    if (!r.ok || d.state !== 'OK') { el('hobox').innerHTML = msg('bad', esc((d && (d.reason || zhBlock(d.blocked_by))) || r.error || '無法產生')); return; }
+    var h = '<div id="printarea" class="handout">';
+    if (d.watermark) h += '<div class="wm">' + esc(d.watermark) + '</div>';
+    h += '<h1>居家靜脈抗生素治療：衛教單</h1><div class="sub">病人代號：' + esc(d.patient_ref || '—') + '｜藥品：' + esc(d.drug_name || '—')
+       + '｜產生日期：' + esc(d.generated_on || '') + '</div>';
+    (d.sections || []).forEach(function(x){
+      h += '<h2>' + esc(x.title) + (x.approved ? '' : '（未核准）') + '</h2>'
+         + '<p>' + esc(x.say) + '</p>'
+         + (x.todo ? '<p><b>要做什麼：</b>' + esc(x.todo) + '</p>' : '')
+         + (x.when_to_call ? '<p><b>什麼情況要馬上聯絡：</b>' + esc(x.when_to_call) + '</p>' : '');
+    });
+    h += '<h2>24 小時聯絡</h2>' + (d.contact ? '<p>' + esc(d.contact.unit) + '：<b>' + esc(d.contact.phone) + '</b>' + (d.contact.hours ? '（' + esc(d.contact.hours) + '）' : '') + '</p>'
+                                          : '<p><b>（院內聯絡電話尚未設定——本單不得交付病人）</b></p>');
+    h += '</div>';
+    if ((d.blockers || []).length) h += msg('warn', '<b>尚不能交付病人：</b><br>' + d.blockers.map(function(b){ return '・' + esc(b.why); }).join('<br>'));
+    h += '<button class="act secondary" id="hoprint">列印</button>';
+    el('hobox').innerHTML = h;
+    el('hoprint').addEventListener('click', function(){ window.print(); });
+  })['apiPatientHandout']({ episode_id: STATE.episode_id });
+}
+/* ★ R60／L8：把 148_署名呈現登記 之逐列標示渲染出來。
+   渲染失敗時顯示錯誤而不是留白——留白看起來像「沒有要標示的來源」。 */
+function renderAttribution(){
+  var box = el('attrbox'); if (!box) return;
+  call(function(r){
+    var d = (r && r.data) || {};
+    var items = d.items || [];
+    if (!items.length) { box.textContent = '（登記表未列出任何須標示之來源）'; return; }
+    var h = '<div class="sub">部署輪廓：' + esc((d.profile||{}).profile_name || '未解析') + '</div><ul>';
+    items.forEach(function(it){
+      h += '<li>' + esc(it.text) + '<span class="fieldnote">（' + esc(it.source_id) + '）</span></li>';
+    });
+    h += '</ul>';
+    box.innerHTML = h;
+  }).apiAttributionNotice({});
+}
+function newDraft(){
+  call(function(r){
+    var d = r.data || {};
+    if (!r.ok || d.state === 'BLOCKED') { el('view').insertAdjacentHTML('afterbegin', msg('bad', esc(d.reason || r.error))); return; }
+    STATE.values = Object.assign({}, d.carried || {});
+    (d.cleared || []).forEach(function(k){ delete STATE.values[k]; });
+    STATE.reconfirm = d.reconfirm || []; STATE.dirty = false;
+    el('view').insertAdjacentHTML('afterbegin', msg('ok', '<b>已依帶入政策預帶：</b>帶入 ' + esc(Object.keys(d.carried||{}).length) + ' 欄；清空 ' + esc((d.cleared||[]).length)
+      + ' 欄（具時效性）；須重新確認 ' + esc((d.reconfirm||[]).length) + ' 欄' + ((d.unknown||[]).length ? '；未定義帶入政策而不帶 ' + esc(d.unknown.length) + ' 欄' : '') + '。請到「我要填的」逐一確認後儲存。'));
+  }).apiNewPlanDraft({ episode_id: STATE.episode_id });
+}
+
+/* ── 交班（DQ-R42-02） ─────────────────────────────────────────── */
+var HO_STATE_ZH = { OFFERED:'已提出', ACCEPTED:'已接受', IN_WORK:'進行中', RESULT_RECORDED:'結果已記', CLOSED:'已結案', DECLINED:'已拒接' };
+function renderHandoffs(list, title){
+  var h = '<div class="card"><h2>' + esc(title) + '</h2>';
+  if (!list.length) return h + '<div class="fieldnote">無</div></div>';
+  h += '<div class=\"tblwrap\"><table><tr><th>療程</th><th>任務</th><th>由</th><th>給</th><th>狀態</th><th>結果參照</th><th>動作</th></tr>';
+  list.forEach(function(x){
+    var ep = String(x._key || '').split('#')[0], task = x.task_code;
+    var acts = [];
+    if (x.state === 'OFFERED') acts.push('ACCEPT', 'DECLINE');
+    if (x.state === 'ACCEPTED') acts.push('START', 'RESULT');
+    if (x.state === 'IN_WORK') acts.push('RESULT');
+    if (x.state === 'RESULT_RECORDED') acts.push('CLOSE');
+    h += '<tr><td>' + esc(ep) + '</td><td>' + esc(x.task_label || task) + '</td><td>' + esc(x.offered_by) + '（' + esc(x.from_role||'') + '）</td><td>' + esc(x.to_role) + '</td><td>' + esc(HO_STATE_ZH[x.state] || x.state) + '</td><td>' + esc(x.result_ref || '—') + '</td><td>'
+       + acts.map(function(a){ return '<button class="act secondary" data-ho="' + a + '" data-ep="' + esc(ep) + '" data-task="' + esc(task) + '" data-pr="' + esc(x.patient_ref||'') + '" data-ver="' + esc(x._record_version||0) + '">' + esc({ACCEPT:'接受',DECLINE:'拒接',START:'開始',RESULT:'記結果',CLOSE:'結案'}[a]) + '</button> '; }).join('') + '</td></tr>';
+  });
+  return h + '</table></div></div>';
+}
+/* R50：療程控制按鈕。理由代碼一律自伺服端清單選，不接受自由輸入。 */
+function bindCourseControl(){
+  Array.prototype.forEach.call(el('view').querySelectorAll('[data-cc]'), function(b){
+    b.addEventListener('click', function(){
+      var action = b.getAttribute('data-cc');
+      var box = el('ccbox'); if (!box) return;
+      box.innerHTML = '<div class="fieldnote">載入理由代碼…</div>';
+      call(function(r){
+        var d = r.data || {};
+        if (!r.ok || d.state !== 'OK' || !(d.options||[]).length) {
+          box.innerHTML = msg('bad', '<b>目前無法變更療程狀態。</b><br>'
+            + esc((d && d.reason) || r.error || '')
+            + '<br>理由代碼必須可統計，因此不接受自由輸入；請先由院內核定 19_選項_理由代碼。');
+          return;
+        }
+        box.innerHTML = '<label>變更理由</label><select id="cc_reason"><option value="">請選擇…</option>'
+          + d.options.map(function(o){ return '<option value="' + esc(o.code) + '">' + esc(o.label||o.code) + '</option>'; }).join('')
+          + '</select><div style="margin-top:8px"><button class="act" id="cc_ok">確定'
+          + esc({PAUSE:'暫停',RESUME:'恢復',STOP:'停止',COMPLETE:'結案'}[action]) + '</button></div>';
+        el('cc_ok').addEventListener('click', function(){
+          var rc = el('cc_reason').value;
+          if (!rc) { box.insertAdjacentHTML('beforeend', msg('bad','請先選擇理由。')); return; }
+          call(function(r2){
+            var d2 = r2.data || {};
+            if (!r2.ok || d2.state !== 'OK') {
+              box.innerHTML = msg('bad', '<b>未變更：</b>' + esc(zhBlock(d2.blocked_by) || r2.error || '')
+                + '。' + esc(d2.reason || ''));
+              return;
+            }
+            box.innerHTML = msg('ok', '療程狀態已變更為 ' + esc(d2.next_status)
+              + '（健保計畫與血管通路未連動變更）。');
+            openEpisode(STATE.episode_id, STATE.patient_ref);
+          })['apiCourseControl']({ episode_id: STATE.episode_id, action: action, reason_code: rc });
+        });
+      })['apiOptionList']({ sheet: '19_選項_理由代碼' });
+    });
+  });
+}
+
+/* R50：教學卡片入口。伺服端 apiTeachingCards 自 R41 就可用，畫面從來沒有呼叫點。 */
+function bindTeachingCards(){
+  var b = el('tcbtn'); if (!b) return;
+  b.addEventListener('click', function(){
+    var box = el('tcbox'); box.innerHTML = '<div class="fieldnote">載入中…</div>';
+    call(function(r){
+      var d = r.data || {};
+      var cards = (d.cards || d.items || []);
+      if (!r.ok) { box.innerHTML = msg('bad','載入失敗：' + esc(r.error||'')); return; }
+      if (!cards.length) { box.innerHTML = msg('warn','目前沒有可顯示的教學卡片：警示文字須經核准顯示，體積契約須有已核定之定義列。'); return; }
+      box.innerHTML = cards.map(function(c){
+        return '<div class="msg warn"><b>' + esc(c.title || c.code || '') + '</b><br>'
+             + esc(c.text || c.body || '') + '</div>'; }).join('');
+    })['apiTeachingCards']({ episode_id: STATE.episode_id });
+  });
+}
+
+/* R50：交班的兩個選值改由伺服端清單下拉，取代 window.prompt。 */
+function openHandoffPicker(btn, action, ep, task, pr, ver){
+  var host = document.createElement('div');
+  host.className = 'msg warn'; host.style.margin = '6px 0';
+  host.innerHTML = '載入可選項…';
+  btn.parentNode.appendChild(host);
+  var isResult = (action === 'RESULT');
+  call(function(r){
+    var opts = [];
+    if (isResult) {
+      var rows = (r.ok && r.data && r.data.rows) || [];
+      opts = rows.filter(function(x){ return x.record_id; })
+                 .map(function(x){ return { v: x.record_id,
+                        t: (x.entity || '') + '　' + (x.at || '') + '　' + (x.actor || '') }; });
+    } else {
+      var os = (r.ok && r.data && r.data.options) || [];
+      opts = os.map(function(x){ return { v: x.code, t: (x.label || x.code) }; });
+    }
+    if (!opts.length) {
+      host.className = 'msg bad';
+      host.innerHTML = isResult
+        ? '<b>這個療程還沒有可以當作結果參照的落盤紀錄。</b><br>請先完成並儲存該筆紀錄，再回來記結果。'
+        : '<b>82_選項_理由代碼 目前沒有任何已核准的選項。</b><br>拒接理由必須可統計，因此不接受自由輸入；請先由院內核定理由代碼。';
+      return;
+    }
+    host.className = 'msg warn';
+    host.innerHTML = '<label>' + (isResult ? '結果參照（本療程已落盤之紀錄）' : '拒接理由') + '</label>'
+      + '<select class="hp"><option value="">請選擇…</option>'
+      + opts.map(function(o){ return '<option value="' + esc(o.v) + '">' + esc(o.t) + '</option>'; }).join('')
+      + '</select><div style="margin-top:8px"><button class="act hpok">確定</button> '
+      + '<button class="act secondary hpx">取消</button></div>';
+    host.querySelector('.hpx').addEventListener('click', function(){ host.parentNode.removeChild(host); btn.disabled = false; });
+    host.querySelector('.hpok').addEventListener('click', function(){
+      var v = host.querySelector('.hp').value;
+      if (!v) { host.insertAdjacentHTML('beforeend', msg('bad','請先選一個值；此欄不接受空白。')); return; }
+      var req = { episode_id: ep, patient_ref: pr, task_code: task, action: action,
+                  request_id: 'REQ-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8),
+                  expected_record_version: ver };
+      if (isResult) req.result_ref = v; else req.decline_reason_code = v;
+      host.parentNode.removeChild(host);
+      call(function(r2){
+        var d = r2.data || {};
+        if (!r2.ok || d.blocked_by || d.status !== 'OK') {
+          el('view').insertAdjacentHTML('afterbegin', msg('bad','<b>交班未執行：</b>'
+            + esc(zhBlock(d.blocked_by) || r2.error || d.status || '') + '。' + esc(d.reason || '')));
+          btn.disabled = false; return;
+        }
+        loadWorklist();
+      })['apiHandoff'](req);
+    });
+  })[isResult ? 'apiTimeline' : 'apiOptionList'](isResult ? { episode_id: ep } : { sheet: '82_選項_理由代碼', field: 'handoff_decline_reason' });
+}
+
+function bindHandoffButtons(){
+  Array.prototype.forEach.call(el('view').querySelectorAll('[data-ho]'), function(b){
+    b.addEventListener('click', function(){
+      var action = b.getAttribute('data-ho');
+      var ep = b.getAttribute('data-ep') || STATE.episode_id, pr = b.getAttribute('data-pr') || STATE.patient_ref;
+      var task = b.getAttribute('data-task') || (el('ho_task') ? el('ho_task').value.trim() : '');
+      if (!ep || !task) { el('view').insertAdjacentHTML('afterbegin', msg('bad', '交班需要療程與任務代碼。')); return; }
+      var req = { episode_id: ep, patient_ref: pr, task_code: task, action: action,
+                  request_id: 'REQ-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8),
+                  expected_record_version: Number(b.getAttribute('data-ver') || 0) };
+      /* R50：原本以 window.prompt 取得結果參照與拒接理由碼。
+         那等於在一個「以勾選與下拉為主」的平台上，把兩個最需要統計的欄位做成自由文字：
+         理由碼打錯就永遠統計不到，結果參照打錯會掛到別的紀錄。
+         改為就地展開伺服端清單的下拉——選項來自 apiTimeline（本療程已落盤紀錄）
+         與 82_選項_理由代碼，兩者都由伺服端提供，前端不自行造值。 */
+      if (action === 'RESULT' || action === 'DECLINE') {
+        openHandoffPicker(b, action, ep, task, pr, Number(b.getAttribute('data-ver') || 0));
+        return;
+      }
+      b.disabled = true;
+      call(function(r){
+        var d = r.data || {};
+        if (!r.ok || d.blocked_by) { el('view').insertAdjacentHTML('afterbegin', msg('bad', '<b>交班未執行：</b>' + esc(zhBlock(d.blocked_by) || r.error) + '。' + esc(d.reason || '') + ((d.missing||[]).length ? '<br>' + d.missing.map(function(x){ return '・' + esc(x); }).join('<br>') : ''))); b.disabled = false; return; }
+        if (d.status !== 'OK') { el('view').insertAdjacentHTML('afterbegin', msg('bad', '交班未寫入：' + esc(d.status))); b.disabled = false; return; }
+        el('view').insertAdjacentHTML('afterbegin', msg('ok', '交班 ' + esc(action) + ' 已記錄：狀態 ' + esc(HO_STATE_ZH[d.handoff.state] || d.handoff.state) + '。'));
+        show(STATE.tab);
+      }).apiHandoff(req);
+    });
+  });
+}
+
+/* ── 四軸與缺項（O-88） ────────────────────────────────────────── */
+/* R61／N16：療法組合建議之唯讀卡。★ 建議值不寫入 daily_dose／dosing_frequency 欄——
+   建議是建議，確認是確認；寫進同名欄會蓋掉醫師已確認的處方。 */
+function renderRegimenSuggestion(rs){
+  if (!rs.available) {
+    return '<div class="card"><h2>療法組合建議</h2>' + msg('warn', esc(rs.text || '目前沒有可建議之療法組合'))
+      + ((rs.reasons && rs.reasons.length) ? '<div class="fieldnote">原因：' + rs.reasons.map(esc).join('；') + '</div>' : '')
+      + (rs.renal_gate_detail ? '<div class="fieldnote">' + esc(rs.renal_gate_detail) + '</div>' : '')
+      + '</div>';
+  }
+  var rows = [['療法組合', rs.regimen_id], ['每日總量', rs.daily_total_text], ['給藥頻次', rs.dosing_frequency_label || rs.dosing_frequency],
+              ['輸注裝置（證據所用型號）', rs.device_id], ['最終濃度 mg/mL', rs.final_conc], ['稀釋液', rs.diluent],
+              ['溫度節點 °C', rs.temp_node_c], ['每袋時數', rs.duration_h], ['允收標準', rs.acceptance_standard],
+              ['遞送效能', rs.delivery_performance_status], ['仿單狀態', rs.off_label_status], ['前置條件', rs.prerequisite]];
+  var t = '<div class="tblwrap"><table>' + rows.filter(function(x){ return x[1] !== null && x[1] !== undefined && x[1] !== ''; })
+    .map(function(x){ return '<tr><td>' + esc(x[0]) + '</td><td>' + esc(x[1]) + '</td></tr>'; }).join('') + '</table></div>';
+  var ev = (rs.evidence || []).map(function(e){ return esc(e.claim) + '：' + (e.evidence_ids || []).map(esc).join('、'); }).join('<br>');
+  return '<div class="card"><h2>療法組合建議（系統建議，須醫師確認）</h2>' + t
+    + (ev ? '<div class="fieldnote">逐項證據：<br>' + ev + '</div>' : '')
+    + ((rs.warnings && rs.warnings.length) ? '<div class="fieldnote">揭露事項：' + rs.warnings.map(esc).join('、') + '（詳見「這次判定」）</div>' : '')
+    + (rs.release_note ? msg('warn', esc(rs.release_note)) : '')
+    + '</div>';
+}
+function renderAxes(a, missing){
+  a = a || {}; missing = missing || {};
+  var h = '<div class="card"><h2>四狀態軸</h2><div class="sub">四軸互不推導。其中一軸為綠不代表可以交付給病人。'
+        + '灰色「尚未判定（UNKNOWN）」是還沒判，不是不通過。</div><div class="axes">';
+  ['Clinical_Prescribable','Technical_Releasable','NHI_Eligible','Claim_Ready'].forEach(function(k){
+    var x = a[k] || {}, ms = missing[k] || [];
+    h += '<div class="axis"><div class="n">' + AXIS_NAME[k] + '</div><div class="v ' + esc(x.status||'UNKNOWN') + '">' + esc(zhStatus(x.status||'UNKNOWN')) + '</div>';
+    if (ms.length) h += '<ul>' + ms.map(function(m){ return '<li>缺 <b>' + esc(m.label||m.key||'') + '</b>' + (m.provider ? '（由 ' + esc(m.provider) + ' 提供）' : '') + '</li>'; }).join('') + '</ul>';
+    else if (x.reasons && x.reasons.length) h += '<ul>' + x.reasons.map(function(r){ return '<li>'+esc(r)+'</li>'; }).join('') + '</ul>';
+    h += '</div>';
+  });
+  h += '</div>';
+  ['INFECTION','EPISODE'].forEach(function(g){
+    var ms = missing[g] || [];
+    if (ms.length) h += '<div class="fieldnote" style="margin-top:8px"><b>' + AXIS_NAME[g] + '尚缺：</b>' + ms.map(function(m){ return esc(m.label||m.key) + '（' + esc(m.provider||'') + '）'; }).join('、') + '</div>';
+  });
+  return h + '</div>';
+}
+
+/* ── 這次判定 ──────────────────────────────────────────────────── */
+function renderVerdict(){
+  if (!STATE.episode_id || !STATE.patient_ref) { el('view').innerHTML = msg('warn', '尚未選定病人與療程。'); return; }
+  var h = '<div class="card"><h2>這次判定</h2><div class="sub">試算是「現在知道什麼、缺什麼、誰能補」，不放行。放行是另一個動作，需要放行授權。</div>'
+        + '<button class="act" id="run">重新試算</button> '
+        + (STATE.roles.indexOf('RPh') >= 0 ? '<button class="act secondary" id="release" style="margin-left:8px">放行（apiRelease）</button>' : '')
+        + '<div id="result"></div></div>';
+  el('view').innerHTML = h;
+  el('run').addEventListener('click', runAssemble);
+  var rb = el('release'); if (rb) rb.addEventListener('click', release);
+  runAssemble();
+}
+function assembleInput(){
+  var v = {}; for (var k in STATE.values) if (STATE.values[k] !== '' && STATE.values[k] !== null && STATE.values[k] !== undefined) v[k] = STATE.values[k];
+  v.episode_id = STATE.episode_id; v.patient_ref = STATE.patient_ref; return v;
+}
+function runAssemble(){
+  var btn = el('run'); if (btn) { btn.disabled = true; btn.textContent = '計算中…'; }
+  call(function(r){
+    if (btn) { btn.disabled = false; btn.textContent = '重新試算'; }
+    var out = el('result'); if (!out) return;
+    if (!r.ok) { out.innerHTML = msg('bad', '執行失敗：' + esc(r.error)); return; }
+    var d = r.data; STATE.lastVerdict = d;
+    if (d.banner) { STATE.serverBanner = d.banner; renderBanner(); }
+    var h = renderAxes(d.axes, d.missing_by_axis) + renderWarnings(d);
+    if (d.providers_needed && d.providers_needed.length)
+      h += '<div class="card"><h2>誰能補</h2><div class="sub">' + d.providers_needed.map(esc).join('、') + '</div></div>';
+    h += '<div class="card"><div class="sub">稽核落盤：' + (d.audit && d.audit.written ? ('已寫入，收據 <code>' + esc(d.audit.receipt) + '</code>') : ('未寫入（' + esc(d.audit && d.audit.status) + '）')) + '</div></div>';
+    out.innerHTML = h;
+    Array.prototype.forEach.call(out.querySelectorAll('input.ack'), function(cb){ cb.addEventListener('change', function(){ STATE.acks = STATE.acks || {}; STATE.acks[cb.getAttribute('data-code')] = cb.checked; }); });
+    var sa = el('saveacks'); if (sa) sa.addEventListener('click', saveAcks);
+  }).apiAssemble(assembleInput());
+}
+/* O-92／C11-006：逐條確認送出為列表（RPH-07 engine_key=acks），存到 PLAN */
+function saveAcks(){
+  var out = el('result'); var codes = Object.keys(STATE.acks || {}).filter(function(c){ return STATE.acks[c]; });
+  if (!codes.length) { out.insertAdjacentHTML('afterbegin', msg('warn', '尚未勾選任何一條。')); return; }
+  var vk = String(STATE.versions.PLAN || 0);
+  call(function(r){
+    var d = r.data || {};
+    if (!r.ok || d.blocked_by) { out.insertAdjacentHTML('afterbegin', msg('bad', '逐條確認未寫入：' + esc(zhBlock(d.blocked_by) || r.error) + ' ' + esc(d.reason || ''))); return; }
+    if (d.status !== 'OK') { out.insertAdjacentHTML('afterbegin', msg('bad', '逐條確認未寫入：' + esc(d.status))); return; }
+    STATE.versions.PLAN = (d.record && d.record.record_version) || (STATE.versions.PLAN || 0) + 1;
+    out.insertAdjacentHTML('afterbegin', msg('ok', '已儲存逐條確認 ' + esc(codes.length) + ' 條（第 ' + esc(STATE.versions.PLAN) + ' 版）。'));
+  }).apiSave({ entity: 'PLAN', key: STATE.episode_id, patient_ref: STATE.patient_ref,
+               request_id: 'REQ-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8),
+               expected_record_version: STATE.versions.PLAN || 0,
+               payload: { acks: codes.map(function(c){ return { warning_code: c, ack: true, version_key: vk }; }) } });
+}
+function release(){
+  if (!window.confirm('放行是不可逆的高風險動作，會經六段授權鏈與放行管線。確定要送出放行？')) return;
+  var btn = el('release'); btn.disabled = true;
+  call(function(r){
+    btn.disabled = false;
+    var d = r.data || {}, out = el('result');
+    if (!r.ok) { out.insertAdjacentHTML('afterbegin', msg('bad', '放行呼叫失敗：' + esc(r.error))); return; }
+    if (d.state === 'RELEASED') out.insertAdjacentHTML('afterbegin', msg('ok', '<b>已放行。</b>行動 ' + esc(d.action_id)));
+    else if ((d.missing_explained||[]).length) out.insertAdjacentHTML('afterbegin', msg('bad', '<b>未放行：</b>' + esc(zhBlock(d.blocked_by) || d.blocked_at || '')
+      + '<br><b>缺什麼、為什麼、誰能補：</b>' + renderExplained(d.missing_explained)));
+    else out.insertAdjacentHTML('afterbegin', msg('bad', '<b>未放行：</b>' + esc(zhBlock(d.blocked_by) || d.blocked_at || '') + '。' + esc(d.reason || (d.reasons||[]).join('；') || '')
+      + ((d.missing||[]).length ? '<br><b>缺什麼、誰能補：</b><br>' + d.missing.map(function(x){ return '・' + esc(x); }).join('<br>') : '')));
+  }).apiRelease(assembleInput());
+}
+/* R61／N23：放行缺項之白話說明（伺服端 explainReleaseReasons_）。原始代碼以小字保留，便於回報。 */
+/* R61／N24a：多選下拉（Value_Format＝MULTI）。值為代碼陣列；空陣列視為未填。 */
+function multiSelect(attrs, f, val, blocked){
+  var cur = Array.isArray(val) ? val.map(String) : (val == null || val === '' ? [] : String(val).split(/[|,;、]/));
+  var n = Math.min(Math.max((f.options||[]).length, 2), 6);
+  return '<select multiple size="' + n + '"' + attrs + (blocked?' disabled':'') + '>'
+    + (f.options||[]).map(function(o){ return '<option value="' + esc(o.value) + '"' + (cur.indexOf(String(o.value))>=0?' selected':'') + '>' + esc(o.label) + '</option>'; }).join('')
+    + '</select><div class="fieldnote">可多選（按住 Ctrl 或 ⌘ 點選；手機直接點選多項）</div>';
+}
+function selectedValues(x){
+  return Array.prototype.filter.call(x.options, function(o){ return o.selected; }).map(function(o){ return o.value; });
+}
+function renderExplained(list){
+  return '<div class="tblwrap"><table><tr><th>缺項</th><th>為什麼</th><th>誰能補／怎麼補</th></tr>' + list.map(function(m){
+    return '<tr><td><b>' + esc(m.label || m.key) + '</b>' + (m.field_id ? '<div class="fieldnote">' + esc(m.field_id) + '｜' + esc(m.raw) + '</div>' : '<div class="fieldnote">' + esc(m.raw) + '</div>')
+      + '</td><td>' + esc(m.why || '') + '</td><td>' + esc(m.provider || '') + (m.action ? '<div class="fieldnote">' + esc(m.action) + '</div>' : '') + '</td></tr>';
+  }).join('') + '</table></div>';
+}
+function renderWarnings(d){
+  var disp = d.display || {}, sum = d.display_summary || {}, items = disp.items || [];
+  var h = '<div class="card"><h2>需要注意的事</h2>';
+  var canAck = STATE.roles.indexOf('RPh') >= 0;
+  if (items.length) {
+    h += '<div class="sub">依嚴重度排序；每一條都寫明什麼不成立、後果與可以怎麼做。' + (canAck ? '藥師須逐條確認（每一條一個勾），一次確認全部不算確認。' : '') + '</div>';
+    items.forEach(function(it, i){
+      var code = it.code || it.warning_code || it['代碼'] || ('ITEM-' + i);
+      h += '<div class="msg warn">' + (canAck ? '<label style="display:inline"><input type="checkbox" class="ack" data-code="' + esc(code) + '"' + (STATE.acks && STATE.acks[code] ? ' checked' : '') + '> 已逐條確認</label> ' : '')
+         + '<b>' + esc(it['什麼不成立'] || '（未提供說明）') + '</b>'
+         + (it['臨床後果'] ? '<br>後果：' + esc(it['臨床後果']) : '') + (it['可執行替代'] ? '<br>可以怎麼做：' + esc(it['可執行替代']) : '')
+         + (it['誰要做什麼'] ? '<br>誰要做什麼：' + esc(it['誰要做什麼']) : '') + '</div>'; });
+    if (canAck) h += '<button class="act secondary" id="saveacks">儲存逐條確認（' + esc(items.length) + ' 條）</button><div class="fieldnote">送出為每一條一筆 {warning_code, ack, version_key}；缺任一條放行即 WARN-PHM-03。</div>';
+  }
+  var gated = sum.blocked_by_display_gate || 0;
+  if (gated) h += msg('bad', '<b>另有 ' + gated + ' 條警示尚未經院內核准顯示。</b>這些警示已參與判定並擋下相關放行，只是文字還不能給你看——「還沒核准顯示」不等於「沒有問題」。');
+  if (!items.length && !gated) h += msg('ok', '本次判定未觸發任何警示。');
+  var codes = (d.plan && d.plan.warnings) || [];
+  if (codes.length) h += '<details><summary class="sub">技術明細（資訊室用）</summary><code>' + codes.map(esc).join('、') + '</code></details>';
+  return h + '</div>';
+}
+
+/* ── 我要填的 ──────────────────────────────────────────────────── */
+/* ══ R60 批次 F（F1＋F2）：「我要填的」改為 task-scoped ══════════════
+   原本這一頁呼叫 apiScreen(role)，把整個職類的欄位（醫師 65 欄）全部
+   送進瀏覽器，再以 CSS 把不屬於當前步驟的藏起來。那是畫面極簡而 payload
+   不極簡：使用者看不到，但資料已經在他的瀏覽器裡；而且「隱藏」與
+   「無權存取」在傳輸層完全分不出來。
+   現在改為：先選「你現在要做哪一件事」，伺服端只回那一件事需要的欄位。
+   HIDDEN 之欄位一格都不送；例外欄位只送條件與標籤，條件成立才索取完整定義。 */
+function renderFormTab(){
+  if (!STATE.roles.length) { el('view').innerHTML = msg('bad', '無法確認你的畫面角色，因此沒有可填欄位。請先到「我的工作」讓系統確認身分。'); return; }
+  var h = '<div class="card"><h2>我要填的</h2><div class="sub">先選你現在要做的事；畫面只會出現那一件事需要的欄位。其餘欄位不是被藏起來，是根本沒有送到這台電腦。</div>'
+        + '<div id="taskbtns"><span class="sub">載入任務清單…</span></div></div>'
+        + '<div id="blockmsg"></div><div id="form"></div><div id="result"></div>';
+  el('view').innerHTML = h;
+  loadTaskList();
+}
+var ROLE_NAME = { MD:'醫師端', RPh:'藥師端', NUR:'護理端', CM:'個管端', TCH:'教學評量' };
+function loadTaskList(){
+  call(function(r){
+    var d = r.data, host = el('taskbtns');
+    if (!host) return;
+    if (!r.ok || !d || d.state === 'BLOCKED') {
+      host.innerHTML = msg('bad', '任務清單載入失敗：' + esc(zhBlock((d && (d.blocked_by || d.reason)) || r.error || '')));
+      return;
+    }
+    STATE.tasks = d.tasks || [];
+    if (!STATE.tasks.length) {
+      /* ★ 這個職類還沒做過欄位處置，因此沒有任務。降回角色層畫面，
+         但要說出來——角色層畫面會把整個職類的欄位都送到這台電腦。 */
+      host.innerHTML = msg('warn', '你的職類目前沒有已核定的任務，'
+        + '因此暫時顯示整個職類的欄位（尚未依任務收斂）。');
+      loadTaskScreen('');
+      return;
+    }
+    var normal = STATE.tasks.filter(function(t){ return t.is_normal_path; });
+    var other = STATE.tasks.filter(function(t){ return !t.is_normal_path; });
+    function btns(list){
+      return list.map(function(t){
+        return '<button class="act secondary" data-task="' + esc(t.task_id) + '" style="margin-right:6px;margin-bottom:6px">'
+             + esc(t.task_name) + '</button>'; }).join('');
+    }
+    host.innerHTML = btns(normal)
+      + (other.length ? '<div class="fieldnote" style="margin-top:6px">其他情況：</div>' + btns(other) : '');
+    Array.prototype.forEach.call(host.querySelectorAll('[data-task]'), function(b){
+      b.addEventListener('click', function(){ loadTaskScreen(b.getAttribute('data-task')); }); });
+    loadTaskScreen((normal[0] || STATE.tasks[0]).task_id);
+  }).apiTaskList({});
+}
+function loadTaskScreen(taskId, expand){
+  STATE.taskId = taskId;
+  el('form').innerHTML = '<div class="card"><div class="sub">載入任務欄位…</div></div>';
+  call(function(r){
+    var d = r.data;
+    if (!r.ok || !d || d.state === 'BLOCKED' || d.ok === false) {
+      el('form').innerHTML = msg('bad', '任務欄位載入失敗：' + esc(zhBlock((d && (d.blocked_by || d.reason)) || r.error || '')));
+      return;
+    }
+    STATE.screen = d; STATE.screenRole = d.role;
+    /* 尚未 task 化之職類：伺服端回的是角色層畫面（有 steps，沒有 fields） */
+    if (d.task_model_built === false) { renderForm(d); return; }
+    Array.prototype.forEach.call(el('taskbtns').querySelectorAll('[data-task]'), function(b){
+      b.className = 'act' + (b.getAttribute('data-task') === taskId ? '' : ' secondary'); });
+    renderTaskForm(d);
+  }).apiTaskScreen({ task_id: taskId, expand_exception: expand || null });
+}
+/* ★ R62-INTAKE-01：單一欄位之渲染抽成一個函式，任務畫面與「建立療程第一步（收案）」共用——
+   兩處若各自手寫欄位，就會再一次出現「同一件事兩個輸入點、量測只量得到其中一個」（R62-INTAKE-DUP-01）。 */
+function taskFieldHtml(f, val, entities){
+    var k = f.engine_key || f.field_id, html = '';
+    if (f.entity && f.editable) entities[f.entity] = true;
+    var blocked = f.required && f.input_type==='DROPDOWN' && (!f.options || !f.options.length);
+    var sw = f.show_when ? ' data-sw-key="' + esc(f.show_when.key) + '" data-sw-op="' + esc(f.show_when.op) + '" data-sw-val="' + esc(f.show_when.value==null?'':f.show_when.value) + '"' : '';
+    html += '<div class="fld ' + (blocked?'blocked ':'') + (f.exception_only?'exc ':'')
+          + '" data-fid="' + esc(f.field_id) + '" data-task-state="' + esc(f.task_state) + '"' + sw
+          + ' style="padding:6px;border-radius:4px">';
+    html += '<label>' + esc(f.label) + (f.required && f.editable ?' <span class="req">＊</span>':'') + '</label>';
+    /* ★ 唯讀欄位一律 disabled 且不帶 data-k：它們不是「可以填但先別填」，
+       而是這一件事裡本來就不該由這個人輸入的東西。 */
+    if (!f.editable) {
+      html += '<input disabled value="' + esc(val==null||val===''?'（由系統帶入）':val) + '">';
+      html += '<div class="fieldnote">' + esc(f.task_state === 'EXCEPTION_ONLY' ? '例外時才需要處理' : '系統帶入，供你確認') + '</div>';
+      html += '</div>';
+      return html;
+    }
+    var attrs = ' data-k="' + esc(k) + '" data-entity="' + esc(f.entity||'') + '"' + (f.required?' required':'');
+    if (f.input_type === 'DROPDOWN') {
+      if (f.multi) html += multiSelect(attrs, f, val, blocked);
+      else {
+      html += '<select' + attrs + (blocked?' disabled':'') + '><option value="">' + (blocked ? '（尚無可選項目）' : '請選擇') + '</option>';
+      (f.options||[]).forEach(function(o){ html += '<option value="' + esc(o.value) + '"' + (String(val)===String(o.value)?' selected':'') + '>' + esc(o.label) + '</option>'; });
+      html += '</select>';
+      }
+    } else if (f.input_type === 'DERIVED') {
+      html += '<input disabled value="' + esc(val!=null && val!=='' ? val : '（由系統帶入）') + '">';
+    } else if (f.input_type === 'SCAN') {
+      /* R61／N2：掃碼擷取。條碼掃描器以鍵盤楔形送入；伺服端解析驗證，不符即拒收。 */
+      html += '<input type="text" data-capture="SCAN" autocomplete="off" spellcheck="false"' + attrs + ' value="' + esc(val==null?'':val) + '" placeholder="請以條碼掃描器掃描">';
+      html += '<div class="fieldnote">掃碼擷取；無法掃碼請改走例外並選擇理由</div>';
+    } else if (f.input_type === 'CHECKBOX') {
+      html += '<input type="checkbox"' + attrs + (val===true||String(val).toUpperCase()==='TRUE'?' checked':'') + '>';
+    } else {
+      var t = f.input_type==='NUMBER'?'number':(f.input_type==='DATE'?'date':'text');
+      html += '<input type="' + t + '"' + attrs + ' value="' + esc(val==null?'':val) + '">';
+    }
+    if (f.note) html += '<div class="fieldnote">' + esc(f.note) + '</div>';
+    html += '</div>';
+    return html;
+}
+/* R60／F1：task-scoped 渲染。
+   ★ 這一頁只畫伺服端回來的欄位，不再有「全部畫出來再藏一半」這件事。
+     因此 DOM 裡可操作的欄位集合，必須等於 112_任務可見性矩陣 對這一個
+     task 宣告的 VISIBLE_EDITABLE 集合——G223 比的正是這兩個集合。 */
+function renderTaskForm(m){
+  var bm = el('blockmsg');
+  bm.innerHTML = (m.blocking && m.blocking.length)
+    ? msg('warn', '<b>下列必填欄位目前沒有可選項目，因此這一件事無法完成：</b><br>' + m.blocking.map(function(b){
+        return '・' + esc(b.label) + '（來源 <code>' + esc(b.source) + '</code>，' + esc(b.reason==='EMPTY_SOURCE'?'該主檔尚無資料':(b.reason==='NO_APPROVED_OPTION'?'有資料但尚未核定':'未設定來源')) + '）'; }).join('<br>')
+        + '<br>這是刻意的：沒有院內核定的選項時，系統不提供任何預設值。')
+    : '';
+  var html = '', entities = {};
+  if (STATE.episode_id && STATE.patient_ref) {
+    html += '<div class="card"><h2>目前療程</h2><div class="fieldnote">療程 <b>' + esc(STATE.episode_id)
+          + '</b>　病人 <b>' + esc(STATE.patient_ref) + '</b>　'
+          + '（要換療程請回「我的工作」選取，不在此重新輸入）</div></div>';
+  } else {
+    html += '<div class="card"><h2>尚未選定療程</h2>'
+          + msg('warn', '請先到「我的工作」選一個療程，或在該頁建立療程。')
+          + '</div>';
+  }
+  html += '<div class="card taskcard" data-task="' + esc(m.task_id) + '"><h2>' + esc(m.task_name) + '</h2>'
+        + '<div class="sub">這一件事需要你填 ' + m.visible_editable + ' 格；'
+        + '另有 ' + m.visible_readonly + ' 格是系統帶入供你確認，不必填。'
+        + '（伺服端未送出 ' + m.fields_omitted_as_hidden + ' 個與這件事無關的欄位）</div><div class="grid">';
+  (m.fields || []).forEach(function(f){
+    html += taskFieldHtml(f, STATE.values[f.engine_key || f.field_id], entities);
+  });
+  html += '</div></div>';
+  /* 例外欄位只留條件與標籤；條件成立時才向伺服端索取完整定義。 */
+  if (m.exception_stubs && m.exception_stubs.length) {
+    html += '<div class="card" id="excstub"><h2>例外情況</h2><div class="sub">'
+          + m.exception_stubs.length + ' 個欄位只在特定情況才需要處理。'
+          + '它們的完整定義尚未送到這台電腦——需要時才取。</div>'
+          + '<button class="act secondary" id="expandexc">我需要處理例外情況</button></div>';
+  }
+  var ents = Object.keys(entities);
+  html += '<div class="card"><h2>儲存</h2><div class="sub">只會寫入這一件事裡你負責的欄位。</div>'
+        + ents.map(function(e){ return '<button class="act" data-save="' + esc(e) + '" style="margin-right:8px;margin-bottom:6px">儲存到 ' + esc(e) + '</button>'; }).join('')
+        + (ents.length ? '' : '<div class="fieldnote">這一件事沒有需要你輸入的欄位。</div>')
+        + '</div>';
+  /* ★ R60／J3：系統算出來、由人確認的那一組設定。
+     掛在儲存卡之前，因為它是「按下去之前先看一眼」而不是「存完再說」。 */
+  html += '<div id="confbundle"></div>';
+  el('form').innerHTML = html;
+  el('form').addEventListener('input', onInput); el('form').addEventListener('change', onInput);
+  Array.prototype.forEach.call(el('form').querySelectorAll('[data-save]'), function(b){ b.addEventListener('click', function(){ save(b.getAttribute('data-save'), b); }); });
+  if (el('expandexc')) el('expandexc').addEventListener('click', function(){ loadTaskScreen(STATE.taskId, true); });
+  applyShowWhen();
+  loadConfirmBundle();
+}
+
+/* ── R60／J3：確認系統建議之設定組合（ACT-32） ──────────────────
+   ★ 不做逐欄 checkbox：六個勾選框不會讓人看得更仔細，
+     只會讓確認變成六次機械動作。
+   ★ 但一定要說出「自上次確認以來哪幾格變了」——
+     否則使用者只會看到一個要他再按一次的按鈕，而不知道為什麼。 */
+var CONF_DOMAIN_ZH = {
+  PRESCRIPTION: '處方內容（醫師負責）',
+  PHARMACY_PREPARATION: '調配配方（藥師負責）',
+  DELIVERY_DEVICE: '遞送裝置組態（藥師負責）',
+  VASCULAR_ACCESS: '血管通路（護理師負責）'
+};
+var CONF_ZH = {
+  CURRENT: '已確認且上游未變',
+  NEVER_CONFIRMED: '尚未確認',
+  STALE: '上游已變，先前的確認不再算數',
+  UNDETERMINED: '目前算不出來（不得當成已確認）',
+  NOT_APPLICABLE: '這一件事沒有需要確認的系統建議值'
+};
+function loadConfirmBundle(){
+  var host = el('confbundle'); if (!host) return;
+  if (!STATE.taskId) { host.innerHTML = ''; return; }
+  host.innerHTML = '<div class="card"><div class="sub">載入系統建議值…</div></div>';
+  call(function(r){
+    var d = r.data, host = el('confbundle'); if (!host) return;
+    if (!r.ok || !d) { host.innerHTML = ''; return; }
+    if (d.applicable === false || d.status === 'NOT_APPLICABLE') { host.innerHTML = ''; return; }
+    if (d.state === 'BLOCKED') {
+      host.innerHTML = '<div class="card"><h2>系統建議之設定</h2>'
+        + msg('warn', esc(zhBlock(d.blocked_by || '') || '') + '：' + esc(d.reason || '')) + '</div>';
+      return;
+    }
+    /* ★ R60／K1：一個課責領域一張卡、一顆按鈕。
+       把處方、調配配方、遞送裝置與血管通路混成一次點擊，
+       等於沒有人真的為其中任何一項負責（2026 BSAC/BIA 之職責分工）。 */
+    var bundles = d.bundles || (d.bundle_id ? [d] : []);
+    if (!bundles.length) { host.innerHTML = ''; return; }
+    var h = '';
+    bundles.forEach(function(bd, bi){
+      if (bd.status === 'NOT_APPLICABLE') return;
+      var rows = (bd.field_detail || []).map(function(f){
+        return '<tr' + (f.changed ? ' style="background:#fff6e0"' : '') + '><td>' + esc(f.label)
+             + (f.changed ? ' <b>（已變動）</b>' : '') + '</td><td>'
+             + esc(STATE.values[f.field_id] != null ? STATE.values[f.field_id] : '（由系統帶入）')
+             + '</td><td class="fieldnote">' + esc(f.invalidated_by || '（未宣告失效上游）')
+             + '</td></tr>'; }).join('');
+      var can = bd.status === 'NEVER_CONFIRMED' || bd.status === 'STALE';
+      h += '<div class="card"><h2>' + esc(CONF_DOMAIN_ZH[bd.domain] || bd.domain || '系統建議之設定')
+         + '（需要確認）</h2>'
+         + '<div class="sub">負責職類：<b>' + esc(bd.accountable_role || '（未宣告）') + '</b>。'
+         + '這些值由系統依處方算出來，不需要你輸入；但需要負責的人確認一次。'
+         + '任何一個依據改變時，先前的確認會自動失效。</div>'
+         + msg(bd.status === 'CURRENT' ? 'ok' : (bd.status === 'UNDETERMINED' ? 'bad' : 'warn'),
+               '<b>' + esc(CONF_ZH[bd.status] || bd.status) + '</b>'
+               + (bd.confirmed_by ? '（' + esc(bd.confirmed_by) + '　' + esc(bd.confirmed_at || '') + '）' : '')
+               + (bd.detail ? '<br>' + esc(bd.detail) : ''))
+         + '<table><thead><tr><th>項目</th><th>目前值</th><th>依據（一變即需重新確認）</th></tr></thead><tbody>'
+         + rows + '</tbody></table>';
+      if (can) {
+        h += '<button class="act" id="confbtn' + (bi ? String(bi) : '') + '" data-domain="'
+           + esc(bd.domain || '') + '">確認這一組（'
+           + esc(String((bd.field_ids||[]).length)) + ' 項）</button>'
+           + '<div class="fieldnote">確認會記下你是誰、什麼時候、依據哪一版上游。'
+           + '不是一次簽掉全部——任何一格算不出來時，這個動作不會成功。</div>';
+      } else if (bd.status === 'UNDETERMINED') {
+        h += '<div class="fieldnote">★ 現在不能確認：算不出來的東西不得先確認再說。</div>';
+      }
+      h += '</div>';
+    });
+    host.innerHTML = h;
+    Array.prototype.forEach.call(host.querySelectorAll('[data-domain]'), function(b){
+      b.addEventListener('click', function(){ doConfirmBundle(b.getAttribute('data-domain'), b); });
+    });
+  }).apiConfirmationBundle({ episode_id: STATE.episode_id || '', task_id: STATE.taskId,
+                             values: STATE.values || {} });
+}
+/* ★ R60／K0：送出／撤回治療計畫（ACT-02）。 */
+function doSubmitPlan(action){
+  var b = el('psbtn'); if (b) b.disabled = true;
+  var box = el('psbox'); if (box) box.innerHTML = '<span class="fieldnote">處理中…</span>';
+  var req = { episode_id: STATE.episode_id, action: action };
+  if (action === 'WITHDRAW') {
+    var rc = window.prompt ? '' : '';
+    var sel = el('ps_reason');
+    req.reason_code = sel ? sel.value : '';
+  }
+  google.script.run.withSuccessHandler(function(res){
+    if (b) b.disabled = false;
+    var d = (res && res.data) ? res.data : res;
+    var st = el('psstate');
+    if (d && d.state === 'OK') {
+      if (st) st.textContent = d.submission_state || '';
+      if (box) box.innerHTML = '<span class="ok">已'
+        + (action === 'WITHDRAW' ? '撤回' : '送出') + '</span>';
+      loadEpisode(STATE.episode_id);
+    } else if (box) {
+      box.innerHTML = '<span class="bad">' + esc(zhBlock((d && (d.blocked_by || d.reason)) || '未能完成'))
+        + '</span>';
+    }
+  }).withFailureHandler(function(e){
+    if (b) b.disabled = false;
+    if (box) box.innerHTML = '<span class="bad">' + esc(String(e && e.message || e)) + '</span>';
+  })['apiSubmitPlan'](req);
+}
+
+/* ★ R60／K0：撤回必須寫理由碼。
+   自由文字在此處被刻意避開：撤回是臨床決定，理由要能被統計與稽核。 */
+function openWithdrawPanel(){
+  var box = el('psbox'); if (!box) return;
+  call(function(r){
+    var opts = ((r && r.options) || []).map(function(o){
+      return '<option value="' + esc(o.code) + '">' + esc(o.label || o.code) + '</option>'; }).join('');
+    box.innerHTML = '<label>撤回理由</label><select id="ps_reason"><option value="">請選擇…</option>'
+      + opts + '</select><div style="margin-top:8px">'
+      + '<button class="act" id="ps_wok">確定撤回</button>'
+      + '<button class="act secondary" id="ps_wno" style="margin-left:6px">取消</button></div>';
+    el('ps_wok').addEventListener('click', function(){ doSubmitPlan('WITHDRAW'); });
+    el('ps_wno').addEventListener('click', function(){ box.innerHTML = ''; });
+  }).apiOptionList({ sheet: '39_計畫結束原因' });
+}
+
+/* ★ R60／K0：稽核軌調閱（ACT-15）。唯讀；調閱本身亦入軌。 */
+function doAuditTrail(){
+  var b = el('audbtn'); if (b) b.disabled = true;
+  var box = el('audbox'); if (box) box.innerHTML = '<span class="fieldnote">查詢中…</span>';
+  google.script.run.withSuccessHandler(function(res){
+    if (b) b.disabled = false;
+    var d = (res && res.data) ? res.data : res;
+    if (!d || d.state !== 'OK') {
+      if (box) box.innerHTML = '<span class="bad">'
+        + esc(zhBlock((d && (d.blocked_by || d.reason)) || '未能調閱')) + '</span>';
+      return;
+    }
+    var h = '<div class="sub">共 ' + esc(String(d.count)) + ' 筆；'
+          + '★ 這次調閱已記錄於 _DB_AUDIT_ACCESS（誰、什麼時候、看了哪一個療程）。</div>';
+    h += '<div class="tblwrap"><table><tr><th>#</th><th>動作</th><th>執行者</th><th>理由碼</th></tr>';
+    (d.events || []).forEach(function(e, i){
+      h += '<tr><td>' + (i + 1) + '</td><td>' + esc(String(e.action || ''))
+         + '</td><td>' + esc(String(e.actor_id || ''))
+         + '</td><td>' + esc(String(e.reason_code || '')) + '</td></tr>';
+    });
+    h += '</table></div>';
+    if (box) box.innerHTML = h;
+  }).withFailureHandler(function(e){
+    if (b) b.disabled = false;
+    if (box) box.innerHTML = '<span class="bad">' + esc(String(e && e.message || e)) + '</span>';
+  })['apiAuditTrail']({ episode_id: STATE.episode_id, purpose: '畫面調閱' });
+}
+
+/* ★ R60／K1：確認一律指名課責領域——一次點擊只替一個領域背書。 */
+function doConfirmBundle(domain, btn){
+  var b = btn || el('confbtn'); if (b) b.disabled = true;
+  call(function(r){
+    var d = r.data;
+    if (!r.ok || !d || d.state === 'BLOCKED') {
+      el('result').innerHTML = msg('bad', '確認未完成：'
+        + esc(zhBlock((d && (d.blocked_by || d.reason)) || r.error || '')));
+      if (b) b.disabled = false;
+      return;
+    }
+    el('result').innerHTML = msg('ok', '已確認「'
+      + esc(CONF_DOMAIN_ZH[domain] || domain || '目前設定')
+      + '」。上游一變會自動失效，屆時需要重新確認。');
+    loadConfirmBundle();
+  }).apiSave({ entity: 'CONFIRMATION', key: STATE.episode_id,
+               request_id: 'CONF-' + STATE.episode_id + '-' + (domain || '') + '-' + Date.now(),
+               expected_record_version: 0,
+               payload: { task_id: STATE.taskId, role: STATE.screenRole,
+                          domain: domain || '',
+                          values: STATE.values || {} } });
+}
+
+function renderForm(m){
+  var bm = el('blockmsg');
+  bm.innerHTML = m.blocking.length
+    ? msg('warn', '<b>下列必填欄位目前沒有可選項目，因此該步驟無法完成：</b><br>' + m.blocking.map(function(b){
+        return '・' + esc(b.label) + '（來源 <code>' + esc(b.source) + '</code>，' + esc(b.reason==='EMPTY_SOURCE'?'該主檔尚無資料':(b.reason==='NO_APPROVED_OPTION'?'有資料但尚未核定':'未設定來源')) + '）'; }).join('<br>')
+        + '<br>這是刻意的：沒有院內核定的選項時，系統不提供任何預設值。')
+    : '';
+  var html = '', entities = {};
+  /* R50：識別碼原本在「我的工作」與「我要填的」各要手打一次。
+     同一個值輸入兩次，只要有一次打錯就會掛到別的療程，而系統無從發現。
+     這裡改為唯讀顯示已選定的療程；要換療程回「我的工作」選，不在此重打。 */
+  if (STATE.episode_id && STATE.patient_ref) {
+    html += '<div class="card"><h2>目前療程</h2><div class="fieldnote">療程 <b>' + esc(STATE.episode_id)
+          + '</b>　病人 <b>' + esc(STATE.patient_ref) + '</b>　'
+          + '（要換療程請回「我的工作」選取，不在此重新輸入，避免同一個值打兩次而不一致）</div></div>';
+  } else {
+    html += '<div class="card"><h2>尚未選定療程</h2>'
+          + msg('warn', '請先到「我的工作」選一個療程，或在該頁建立療程。'
+              + '此頁不再提供第二個輸入框——同一個識別碼在兩個地方各打一次，是打錯了也不會被發現的做法。')
+          + '</div>';
+  }
+  /* R50：原本 9 張步驟卡片一次全部疊在同一頁、同一次捲動範圍內，
+     醫師端 57 欄（其中 30+ 必填）連續呈現。交付紀錄自己寫過
+     「臨床端實際不會填完，資料完整度崩塌」——那正是這個版面造成的。
+     改為一次一步，附進度與每一步的完成狀態；欄位本身、契約與儲存分組完全不變。 */
+  html += '<div class="card" id="stepnav"><h2>填寫進度</h2><div class="sub">一次一步；可隨時跳到任一步。標示為必填的欄位未填仍可先存草稿，但判定會停在尚未判定。</div><div id="stepbtns"></div></div>';
+  m.steps.forEach(function(s, si){
+    html += '<div class="card stepcard" data-step="' + esc(s.step) + '" data-si="' + si + '"><h2>步驟 ' + esc(s.step) + '</h2><div class="grid">';
+    s.fields.forEach(function(f){
+      var k = f.engine_key || f.field_id, val = STATE.values[k];
+      if (f.entity) entities[f.entity] = true;
+      var blocked = f.required && f.input_type==='DROPDOWN' && (!f.options || !f.options.length);
+      var sw = f.show_when ? ' data-sw-key="' + esc(f.show_when.key) + '" data-sw-op="' + esc(f.show_when.op) + '" data-sw-val="' + esc(f.show_when.value==null?'':f.show_when.value) + '"' : '';
+      html += '<div class="fld ' + (blocked?'blocked':'') + '" data-fid="' + esc(f.field_id) + '"' + sw + ' style="padding:6px;border-radius:4px">';
+      html += '<label>' + esc(f.label) + (f.required?' <span class="req">＊</span>':'') + (STATE.reconfirm && STATE.reconfirm.indexOf(k)>=0 ? ' <span style="color:var(--warn)">（帶入值，請重新確認）</span>' : '') + '</label>';
+      var attrs = ' data-k="' + esc(k) + '" data-entity="' + esc(f.entity||'') + '"' + (f.required?' required':'');
+      if (f.input_type === 'DROPDOWN') {
+        if (f.multi) html += multiSelect(attrs, f, val, blocked);
+        else {
+        html += '<select' + attrs + (blocked?' disabled':'') + '><option value="">' + (blocked ? '（尚無可選項目）' : '請選擇') + '</option>';
+        (f.options||[]).forEach(function(o){ html += '<option value="' + esc(o.value) + '"' + (String(val)===String(o.value)?' selected':'') + '>' + esc(o.label) + '</option>'; });
+        html += '</select>';
+        }
+      } else if (f.input_type === 'DERIVED') {
+        /* R50：衍生欄有兩種空白，畫面必須分得出來。
+           「由系統帶入」＝有來源，只是這個情境還沒算出來；
+           「尚無內容來源」＝這一欄的產生邏輯根本還不存在（契約以 Derived_From=NOT_BUILT 宣告）。
+           兩者都顯示成同一句話，等於把未施工說成已施工。 */
+        var notBuilt = (f.derived_from === 'NOT_BUILT');
+        html += '<input disabled value="' + esc(val!=null && val!=='' ? val
+                 : (notBuilt ? '（尚無內容來源：此欄之產生邏輯尚未建立）' : '（由系統帶入）')) + '">';
+        if (notBuilt && f.note) html += '<div class="fieldnote">' + esc(f.note) + '</div>';
+      } else if (f.input_type === 'SCAN') {
+        /* R61／N2：掃碼擷取。條碼掃描器以鍵盤楔形送入；伺服端解析驗證，不符即拒收。 */
+        html += '<input type="text" data-capture="SCAN" autocomplete="off" spellcheck="false"' + attrs + ' value="' + esc(val==null?'':val) + '" placeholder="請以條碼掃描器掃描">';
+        html += '<div class="fieldnote">掃碼擷取；無法掃碼請改走例外並選擇理由</div>';
+      } else if (f.input_type === 'CHECKBOX') {
+        html += '<input type="checkbox"' + attrs + (val===true||String(val).toUpperCase()==='TRUE'?' checked':'') + '>';
+      } else {
+        var t = f.input_type==='NUMBER'?'number':(f.input_type==='DATE'?'date':'text');
+        var rng = (f.range && f.range.status==='OK') ? (f.range.min!=null?' min="'+esc(f.range.min)+'"':'') + (f.range.max!=null?' max="'+esc(f.range.max)+'"':'') + ' step="any"' : '';
+        html += '<input type="' + t + '"' + attrs + rng + ' value="' + esc(val==null?'':val) + '">';
+        if (f.range && f.range.status==='OK') html += '<div class="fieldnote">允收範圍 ' + esc(f.range.min==null?'—':f.range.min) + '～' + esc(f.range.max==null?'—':f.range.max) + ' ' + esc(f.range.unit||'') + '（29_數值合理範圍）</div>';
+        else if (f.input_type==='NUMBER') html += '<div class="fieldnote">允收範圍尚未由院內核定；引擎計算前仍會擋</div>';
+      }
+      if (f.note) html += '<div class="fieldnote">' + esc(f.note) + '</div>';
+      html += '</div>';
+    });
+    html += '</div></div>';
+  });
+  var ents = Object.keys(entities);
+  html += '<div class="card"><h2>儲存</h2><div class="sub">只會寫入「你這個角色負責的欄位」；他角色欄位若你有提報權限會以「提報」存放，判定只採確認值。</div>'
+        + ents.map(function(e){ return '<button class="act" data-save="' + esc(e) + '" style="margin-right:8px;margin-bottom:6px">儲存到 ' + esc(e) + '</button>'; }).join('')
+        + '<div class="fieldnote">每一組各自留版本；有人先改過同一組會被擋下而不是被覆蓋。</div></div>';
+  el('form').innerHTML = html;
+  el('form').addEventListener('input', onInput); el('form').addEventListener('change', onInput);
+  Array.prototype.forEach.call(el('form').querySelectorAll('[data-save]'), function(b){ b.addEventListener('click', function(){ save(b.getAttribute('data-save'), b); }); });
+  applyShowWhen();
+  buildStepNav();
+  showStep(STATE.stepIndex || 0);
+}
+
+/* R50：步驟導覽。每一步標出「必填已填／必填總數」，讓人知道還差什麼而不必逐格捲動。 */
+function stepProgress(card){
+  var req = 0, done = 0;
+  Array.prototype.forEach.call(card.querySelectorAll('.fld:not(.hidden) [data-k]'), function(x){
+    if (!x.hasAttribute('required') || x.disabled) return;
+    req++;
+    var v = (x.type === 'checkbox') ? x.checked : (x.multiple ? selectedValues(x) : x.value);
+    if (v !== '' && v !== null && v !== undefined && v !== false) done++;
+  });
+  return { req: req, done: done };
+}
+function buildStepNav(){
+  var host = el('stepbtns'); if (!host) return;
+  var cards = el('form').querySelectorAll('.stepcard');
+  var h = '';
+  Array.prototype.forEach.call(cards, function(c, i){
+    var p = stepProgress(c);
+    var mark = p.req === 0 ? '' : (p.done === p.req ? ' ✓' : ' ' + p.done + '/' + p.req);
+    h += '<button class="act secondary stepbtn" data-go="' + i + '" style="margin:0 6px 6px 0">第 '
+       + esc(c.getAttribute('data-step')) + ' 步' + esc(mark) + '</button>';
+  });
+  host.innerHTML = h;
+  Array.prototype.forEach.call(host.querySelectorAll('[data-go]'), function(b){
+    b.addEventListener('click', function(){ showStep(Number(b.getAttribute('data-go'))); });
+  });
+}
+function showStep(i){
+  var cards = el('form').querySelectorAll('.stepcard');
+  if (!cards.length) return;
+  if (i < 0) i = 0; if (i >= cards.length) i = cards.length - 1;
+  STATE.stepIndex = i;
+  Array.prototype.forEach.call(cards, function(c, k){ c.style.display = (k === i) ? '' : 'none'; });
+  Array.prototype.forEach.call(el('form').querySelectorAll('.stepbtn'), function(b, k){
+    b.setAttribute('aria-selected', k === i ? 'true' : 'false');
+    b.style.background = (k === i) ? 'var(--blue)' : '#fff';
+    b.style.color = (k === i) ? '#fff' : '';
+  });
+  var nav = el('stepmove');
+  if (nav) nav.parentNode.removeChild(nav);
+  var cur = cards[i];
+  var d = document.createElement('div'); d.id = 'stepmove'; d.style.marginTop = '10px';
+  d.innerHTML = (i > 0 ? '<button class="act secondary" id="prevstep">← 上一步</button> ' : '')
+              + (i < cards.length - 1 ? '<button class="act" id="nextstep">下一步 →</button>' : '<span class="fieldnote">已是最後一步；請於下方「儲存」送出。</span>');
+  cur.appendChild(d);
+  if (el('prevstep')) el('prevstep').addEventListener('click', function(){ showStep(i - 1); });
+  if (el('nextstep')) el('nextstep').addEventListener('click', function(){ showStep(i + 1); });
+}
+function onInput(e){
+  var x = e.target; if (!x || !x.getAttribute) return;
+  if (x.id === 'f_ep') { STATE.episode_id = x.value.trim(); renderBanner(); return; }
+  if (x.id === 'f_pr') { STATE.patient_ref = x.value.trim(); renderBanner(); return; }
+  var k = x.getAttribute('data-k'); if (!k) return;
+  STATE.values[k] = (x.type === 'checkbox') ? x.checked : (x.multiple ? selectedValues(x) : x.value);
+  STATE.dirty = true; renderDirty(); applyShowWhen(); buildStepNav();
+}
+/* 條件展開（Show_When）：前提不成立即隱藏並清空該欄，避免把過期值一起送出 */
+function applyShowWhen(){
+  Array.prototype.forEach.call(el('form').querySelectorAll('.fld[data-sw-key]'), function(div){
+    var key = div.getAttribute('data-sw-key'), op = div.getAttribute('data-sw-op'), want = div.getAttribute('data-sw-val');
+    var cur = STATE.values[key]; var curS = (cur === true) ? 'TRUE' : (cur === false ? 'FALSE' : String(cur==null?'':cur));
+    var showIt = (op === 'NOT_BLANK') ? curS !== '' : curS.toUpperCase() === String(want).toUpperCase();
+    div.classList.toggle('hidden', !showIt);
+    if (!showIt) { var inp = div.querySelector('[data-k]'); if (inp) { var k = inp.getAttribute('data-k'); if (STATE.values[k] !== undefined && STATE.values[k] !== '') { delete STATE.values[k]; if (inp.type==='checkbox') inp.checked=false; else inp.value=''; } } }
+  });
+}
+/* 儲存：依落點實體分組；只送這個角色可寫、目前顯示中、非衍生之欄位 */
+function save(entity, btn){
+  var out = el('result');
+  if (!STATE.episode_id || !STATE.patient_ref) { out.innerHTML = msg('bad', '還不能儲存：請先填病人識別與療程識別。系統不提供任何預設值。'); return; }
+  var payload = {}, missingReq = [];
+  Array.prototype.forEach.call(el('form').querySelectorAll('.fld:not(.hidden) [data-k]'), function(x){
+    if (x.getAttribute('data-entity') !== entity || x.disabled) return;
+    var k = x.getAttribute('data-k');
+    var v = (x.type === 'checkbox') ? x.checked : (x.multiple ? selectedValues(x) : x.value);
+    if (x.type === 'checkbox') { payload[k] = v; return; }
+    if (v !== '') payload[k] = v; else if (x.hasAttribute('required')) missingReq.push(k);
+  });
+  if (!Object.keys(payload).length) { out.innerHTML = msg('warn', '這一組還沒有填任何可儲存的欄位。'); return; }
+  var note = missingReq.length ? msg('warn', '仍有必填未填：' + esc(missingReq.join('、')) + '。可以先存草稿，但判定會停在 UNKNOWN。') : '';
+  btn.disabled = true; btn.textContent = '儲存中…';
+  call(function(r){
+    btn.disabled = false; btn.textContent = '儲存到 ' + entity;
+    if (!r.ok) { out.innerHTML = msg('bad', '儲存失敗：' + esc(r.error)); return; }
+    var d = r.data || {};
+    if (d.blocked_by === 'ACTION_NOT_AUTHORIZED') { out.innerHTML = msg('bad', '<b>這個動作目前沒有被授權，已擋下並記錄。</b><br>' + esc(d.reason || '') + '<br><b>缺什麼、誰能補：</b><br>' + (d.missing || []).map(function(x){ return '・' + esc(x); }).join('<br>')); return; }
+    if (d.blocked_by === 'FIELD_NOT_WRITABLE_BY_ROLE') { var v = (d.field_authz && d.field_authz.violations) || [];
+      out.innerHTML = msg('bad', '<b>這些欄位不屬於你的角色，已擋下並記錄：</b><br>' + v.map(function(x){ return '・' + esc(x.field) + '（' + esc(x.detail) + '）'; }).join('<br>')); return; }
+    if (d.blocked_by === 'ENTITY_NOT_ALLOWED') { out.innerHTML = msg('bad', '<b>儲存實體不合法：</b>' + esc(d.reason)); return; }
+    if (d.blocked_by === 'STORE_INTEGRITY') { out.innerHTML = msg('bad', '<b>試算表被人繞過系統改動過，已停止寫入。</b><br>' + esc(d.reason) + '<br>' + esc(d.remediation || '')); return; }
+    if (d.blocked_by === 'IDENTITY_UNTRUSTED') { out.innerHTML = msg('bad', '<b>無法確認你是誰，因此不寫入。</b><br>' + esc(d.reason)); return; }
+    if (d.blocked_by) { out.innerHTML = msg('bad', '<b>未寫入：</b>' + esc(zhBlock(d.blocked_by)) + '。' + esc(d.reason || '')); return; }
+    if (d.status === 'VERSION_CONFLICT') { out.innerHTML = msg('warn', '<b>有人在你之前改過同一組。</b>你手上的是第 ' + esc((d.conflict||{}).expected) + ' 版，目前已經是第 ' + esc((d.conflict||{}).actual) + ' 版。請到「這位病人」重新載入後再存，系統不會用你的版本覆蓋別人的。'); return; }
+    if (d.status === 'DUPLICATE_IGNORED') { out.innerHTML = msg('ok', '這一筆先前已經存過，未重複寫入。'); return; }
+    if (d.status !== 'OK') { out.innerHTML = msg('bad', '未寫入：' + esc(d.status) + (d.missing ? ('（缺 ' + esc(d.missing.join('、')) + '）') : '')); return; }
+    STATE.versions[entity] = (d.record && d.record.record_version) || (STATE.versions[entity] || 0) + 1;
+    STATE.dirty = false; renderDirty();
+    out.innerHTML = note + msg('ok', '<b>已儲存到 ' + esc(entity) + '</b>（第 ' + esc(STATE.versions[entity]) + ' 版，' + esc(Object.keys(payload).length) + ' 個欄位'
+      + (d.reported_only ? '，以「提報」存放，非確認值' : '') + '）。舊版一列都沒有被覆蓋。'
+      + ((d.server_derived||[]).length ? '<br>伺服端帶入：' + esc(d.server_derived.join('、')) : '')
+      + (d.grant && d.grant.written ? '<br>你已自動取得此療程之範圍授權。' : ''));
+  }).apiSave({ entity: entity, key: STATE.episode_id, patient_ref: STATE.patient_ref,
+               request_id: 'REQ-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8),
+               expected_record_version: STATE.versions[entity] || 0, payload: payload });
+}
+
+/* ── 現況與限制 ────────────────────────────────────────────────── */
+/* R51：成效指標。
+   本頁刻意比照「現況與限制」的揭露風格：算不出來的指標不會從清單裡消失，
+   而是留在原地寫出為什麼算不出來。分母為零時顯示的是「沒有人落進分母」，
+   不是 0%——這兩件事對看的人完全不同。 */
+function renderKpi(){
+  el('view').innerHTML = '<div class="card"><div class="sub">載入成效指標…</div></div>';
+  call(function(r){
+    var d = r.data || {};
+    if (!r.ok || d.state !== 'OK') {
+      el('view').innerHTML = msg('bad','成效指標載入失敗：' + esc((d && d.reason) || r.error || ''));
+      return;
+    }
+    var h = '<div class="card"><h2>成效指標</h2><div class="sub">'
+          + '指標定義（分子、分母、納入、排除、量測窗）一律讀自 _INDICATOR_REGISTRY，'
+          + '系統不代為訂定；未經四要件核准之指標不顯示數字。</div>'
+          + '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">'
+          + '<div><label>起日</label><input type="date" id="kpi_from" value="' + esc(STATE.kpiFrom||'') + '"></div>'
+          + '<div><label>迄日</label><input type="date" id="kpi_to" value="' + esc(STATE.kpiTo||'') + '"></div>'
+          + '<button class="act secondary" id="kpi_go">重新計算</button></div>'
+          + '<div class="fieldnote">留空即不限期間。量測窗由院方於指標定義中訂定，'
+          + '此處只是把起訖日套上去；系統不自行推導曆月或滾動天數。</div></div>';
+    if (!d.total) {
+      h += msg('warn','<b>目前沒有任何指標定義。</b><br>' + esc(d.reason || '')
+             + '<br>需要感染科、品質管理與教學部依 _INDICATOR_REGISTRY 的欄位定義起始指標，'
+             + '並完成四要件核准。');
+      el('view').innerHTML = h; bindKpi(); return;
+    }
+    h += '<div class="card"><h2>共 ' + esc(d.total) + ' 個指標（已計算 ' + esc(d.computed)
+       + '、無法計算 ' + esc(d.blocked) + '）</h2>'
+       + '<div class="tblwrap"><table><tr><th>指標</th><th>狀態</th><th>值</th><th>分子/分母</th>'
+       + '<th>目標</th><th>基線</th><th>為什麼是這個狀態</th></tr>';
+    (d.items||[]).forEach(function(x){
+      var val = (x.status === 'OK')
+        ? '<b>' + esc(x.value) + esc(x.unit||'') + '</b>'
+        : '<span class="fieldnote">—</span>';
+      var nd = (x.denominator === null || x.denominator === undefined)
+        ? '<span class="fieldnote">—</span>'
+        : (esc(x.numerator) + ' / ' + esc(x.denominator));
+      h += '<tr><td>' + esc(x.name || x.indicator_id) + '<div class="fieldnote">'
+         + esc(x.indicator_id) + (x.entity ? '｜來源 ' + esc(x.entity) : '') + '</div></td>'
+         + '<td>' + esc(zhStatus(x.status)) + '</td>'
+         + '<td>' + val + '</td><td>' + nd + '</td>'
+         + '<td>' + esc(x.target || '—') + '</td><td>' + esc(x.baseline || '—') + '</td>'
+         + '<td>' + esc(x.reason || '') + '</td></tr>';
+    });
+    h += '</table></div><div class="fieldnote">「沒有人落進分母」與「0%」是兩件事：'
+       + '前者代表這段期間沒有任何個案符合分母條件，看的人該問的是分母怎麼定的，不是成效差。</div></div>';
+    el('view').innerHTML = h; bindKpi();
+  })['apiDashboard']({ from: STATE.kpiFrom || null, to: STATE.kpiTo || null });
+}
+function bindKpi(){
+  var b = el('kpi_go'); if (!b) return;
+  b.addEventListener('click', function(){
+    STATE.kpiFrom = el('kpi_from').value || null;
+    STATE.kpiTo = el('kpi_to').value || null;
+    renderKpi();
+  });
+}
+
+function renderStatus(){
+  var _emr = emergencyNotice();
+  var d = STATE.readiness || {};
+  var h = _emr + '<div class="card"><h2>現在可以做什麼、不可以做什麼</h2><div class="sub">工程層可用不等於臨床可用。這幾層意義不同，不能只看第一層。</div>'
+    + '<div class=\"tblwrap\"><table><tr><th>層</th><th>現況</th><th>意思</th></tr>'
+    + '<tr><td>臨床放行</td><td>' + esc(d.clinical_release) + '</td><td>能不能用在真實病人</td></tr>'
+    + '<tr><td>執行就緒</td><td>' + esc(d.runtime_readiness) + '</td><td>系統會不會真的動</td></tr>'
+    + '<tr><td>工作表</td><td>' + esc(d.spreadsheet_sheets) + ' 張</td><td>結構是否完整</td></tr></table></div></div>';
+  h += '<div class="card"><h2>內容主檔現況</h2><div class="sub">列數為零者，其相關判定一律值封閉——系統會拒絕出數字並說明缺什麼。</div><div class=\"tblwrap\"><table><tr><th>主檔</th><th>列數</th><th>影響</th></tr>';
+  var c = d.content_rows || {};
+  var impact = { '劑量規則':'無法產生任何劑量建議','穩定性與BUD':'無法核定掛載時數','適應症主檔':'無法判定適應症','監測規則':'監測閉環不成立',
+                 '過敏與交互作用':'不進行過敏檢查','職類能力主檔':'授權鏈停在能力段','人員身分對照':'授權鏈停在身分段' };
+  Object.keys(c).forEach(function(k){ h += '<tr><td>' + esc(k) + '</td><td>' + c[k] + '</td><td>' + (c[k] ? '—' : esc(impact[k]||'相關判定值封閉')) + '</td></tr>'; });
+  h += '</table></div></div>';
+    /* R52：簽核後可用性預檢。放在現況頁最前面，因為它回答的是
+     「開始簽之前應該先知道的事」——簽完之後會不會動。 */
+  var _rdy = (STATE.readiness && STATE.readiness.post_signoff_readiness) || null;
+  if (_rdy && !_rdy.error) {
+    var okAll = _rdy.would_pass === _rdy.total && _rdy.total > 0;
+    h += '<div class="card"><h2>簽完之後會不會動</h2><div class="sub">'
+       + '這一段假設「所有四要件都已簽妥」，再問一次授權鏈會不會通過。'
+       + '過不了的，缺的就不是簽名，是內容。</div>'
+       + (okAll
+          ? msg('ok', '在全部簽名齊備的假設下，' + esc(_rdy.total) + ' 個行動全部可通過。')
+          : msg('bad', '<b>即使把所有簽名都簽完，' + esc(_rdy.total - _rdy.would_pass)
+                + ' 個行動仍然不會通過。</b><br>缺的不是簽名，是下列內容：'))
+       + (_rdy.gaps && _rdy.gaps.length
+          ? '<div class="tblwrap"><table><tr><th>要填哪一格</th><th>擋住幾個行動</th><th>由誰提供</th><th>為什麼</th></tr>'
+            + _rdy.gaps.map(function(g){
+                return '<tr><td>' + esc(g.sheet) + '<br><b>' + esc(g.field) + '</b></td><td>'
+                     + esc(g.actions) + '</td><td>' + esc(g.owner || '') + '</td><td>'
+                     + esc(g.why || '') + '</td></tr>'; }).join('')
+            + '</table></div>'
+          : '')
+       + '</div>';
+  }
+el('view').innerHTML = h + '<div id="stab_overview"></div>';
+  renderStabilityOverview('stab_overview');
+}
+
+/* ══ R62：醫師收案（四欄）、調製後安定性提示、四軸缺項、系統自動覆核與藥師再覆核、結案、安定性總覽 ══
+   ★ 本段只畫伺服端回來的東西：燈號、缺項、誰補、覆核結果全部由伺服端判定；畫面不自行推導任何臨床結論。 */
+var LIGHT_ZH = { GREEN:'綠燈', YELLOW:'黃燈', RED:'紅燈', INFO:'參考' };
+function lightChip(l){ return '<span class="light ' + esc(l || '') + '">' + esc(LIGHT_ZH[l] || '未定') + '</span>'; }
+function renderStabilityCard(d){
+  if (!d) return '';
+  var h = '<div class="card"><h2>調製後安定性提示' + (d.drug_display ? '（' + esc(d.drug_display) + '）' : '') + '</h2>'
+        + '<div class="sub">' + esc(d.not_bud_notice || '') + '</div>';
+  if (d.state !== 'OK') return h + msg('warn', esc(d.reason || zhBlock(d.state))) + '</div>';
+  h += '<div class="tblwrap"><table><tr><th>情境</th><th>燈號</th><th>提示</th></tr>';
+  (d.scenarios || []).forEach(function(c){
+    var more = [];
+    if (c.condition_required) more.push('<b>成立前提：</b>' + esc(c.condition_required));
+    if (c.detail) more.push('<b>研究條件：</b>' + esc(c.detail));
+    if (c.criterion) more.push('<b>允收標準：</b>' + esc(c.criterion));
+    if (c.max_in_use_h != null) more.push('<b>證據支持之配戴／使用：</b>' + esc(c.max_in_use_h) + ' 小時' + (c.in_use_temp_c != null ? '（' + esc(c.in_use_temp_c) + '°C）' : ''));
+    if (c.max_prestorage_d != null) more.push('<b>證據支持之冷藏預存：</b>' + esc(c.max_prestorage_d) + ' 日（2–8°C）');
+    if (c.device_scope) more.push('<b>研究裝置：</b>' + esc(c.device_scope));
+    if (c.concentration_hint) more.push('<b>濃度：</b>' + esc(c.concentration_hint.text));
+    if (c.cautions) more.push('<b>注意：</b>' + esc(c.cautions));
+    if (c.do_not_extrapolate) more.push('<b>不得外推：</b>' + esc(c.do_not_extrapolate));
+    var ev = (c.evidence_keys || []).map(function(k){ var e = d.evidence && d.evidence[k];
+      return e ? '・' + esc(e.citation || k) + (safeUrl(e.url) ? ' <a href="' + esc(safeUrl(e.url)) + '" target="_blank" rel="noopener noreferrer">連結</a>' : '') + '（' + esc(e.verification_level || '') + '）' : '・' + esc(k) + '（未核准或已撤回）'; });
+    h += '<tr><td>' + esc(c.scenario_label) + '</td><td>' + lightChip(c.light) + '</td><td>' + esc(c.headline)
+       + '<details><summary class="fieldnote">研究條件與依據</summary><div class="fieldnote">' + more.join('<br>')
+       + (ev.length ? '<br><b>依據：</b><br>' + ev.join('<br>') : '') + '</div></details></td></tr>';
+  });
+  h += '</table></div>';
+  if ((d.rules || []).length)
+    h += '<details><summary class="fieldnote">共通規則（' + d.rules.length + '）</summary><div class="fieldnote">'
+       + d.rules.map(function(r){ return '・' + esc(r.text); }).join('<br>') + '</div></details>';
+  return h + '</div>';
+}
+function loadStability(req, boxId){
+  var box = el(boxId); if (!box) return;
+  if (!req.ingredient_id && !req.episode_id) { box.innerHTML = ''; return; }
+  box.innerHTML = '<div class="fieldnote">載入安定性提示…</div>';
+  call(function(r){ var d = r.data || {};
+    box.innerHTML = (!r.ok || d.state === 'BLOCKED') ? msg('warn', '安定性提示載入失敗：' + esc(d.reason || zhBlock(d.blocked_by) || r.error || '')) : renderStabilityCard(d);
+  })['apiStabilityPrompt'](req);
+}
+function renderGapTable(g){
+  if (!g) return '';
+  if (g.state === 'BLOCKED') return msg('bad', esc(g.reason || zhBlock(g.blocked_by)));
+  var h = '<div class="card"><h2>四軸判定：缺什麼／誰補／為什麼</h2><div class="sub">可否開立｜可否放行｜健保資格｜可否申報四軸互相獨立；'
+        + '照護團隊模式：' + esc(g.care_team_mode === 'THREE_PROFESSION' ? '三職類（醫師／藥師／護理師）' : '四職類（含個管師）') + '</div>'
+        + '<div class="tblwrap"><table><tr><th>軸</th><th>現況</th><th>缺什麼</th><th>誰補</th><th>為什麼</th></tr>';
+  (g.axes || []).forEach(function(a){
+    var miss = a.missing || [];
+    if (!miss.length) {
+      h += '<tr><td>' + esc(a.label) + '</td><td><span class="v ' + esc(a.status) + '">' + esc(a.status_zh) + '</span></td><td colspan="3">'
+         + (a.passing ? '<span style="color:var(--ok)">無缺項</span>' : esc((a.reasons || []).join('；') || '未通過，原因未回報')) + '</td></tr>';
+      return;
+    }
+    miss.forEach(function(m, i){
+      h += '<tr>' + (i === 0 ? '<td rowspan="' + miss.length + '">' + esc(a.label) + '</td><td rowspan="' + miss.length + '"><span class="v ' + esc(a.status) + '">' + esc(a.status_zh) + '</span></td>' : '')
+         + '<td>' + esc(m.what) + '</td><td>' + esc(m.who) + '</td><td>' + esc(m.why) + '</td></tr>';
+    });
+  });
+  h += '</table></div>';
+  if ((g.flow_todo || []).length)
+    h += '<div class="fieldnote"><b>流程待辦：</b>' + g.flow_todo.map(function(t){ return esc(t.what) + '（' + esc(t.who) + '）：' + esc(t.why); }).join('；') + '</div>';
+  return h + '</div>';
+}
+/* ★ R62-INTAKE-01：醫師收案＝「建立療程」（MD_CREATE_REGIMEN）之第一步。
+   欄位一律由伺服端之任務模型決定、以 taskFieldHtml 渲染——與任務畫面是同一組欄位、同一個渲染函式；
+   畫面不再手寫任何一格（手寫的那一格不在 112_任務可見性矩陣，量測量不到，也就是 R62-INTAKE-DUP-01）。 */
+function openPhysicianIntake(){
+  var box = el('newep_box');
+  box.innerHTML = '<div class="fieldnote">載入建立療程之欄位…</div>';
+  call(function(r){
+    var t = r.data || {};
+    if (!r.ok || t.ok === false || t.state === 'BLOCKED') { box.innerHTML = msg('bad', '建立療程之欄位載入失敗：' + esc(zhBlock(t.blocked_by || t.reason) || r.error || '')); return; }
+    var ef = (t.fields || []).filter(function(f){ return f.editable && !f.exception_only; });
+    call(function(r2){
+      var d = r2.data || {};
+      var pts = (d.patients || []).map(function(p){ return '<option value="' + esc(p.patient_ref) + '">' + esc(p.patient_ref) + '</option>'; }).join('');
+      var today = String(STATE.server_time || '').slice(0, 10);   /* 伺服端日期（畫面不自取時間） */
+      var ents = {}, defaults = { start_date: today };
+      box.innerHTML = '<div class="card" style="margin-top:8px"><h2>醫師收案：建立療程（第一步）</h2>'
+        + '<div class="sub">這一步就是「建立療程」這件事：需要你填 ' + ef.length + ' 格（與「我要填的 → 建立療程」同一組欄位）。'
+        + '處方五格（感染診斷、抗生素、每日劑量、療程天數、開始日期）必填；其餘可先空白，送出後列為缺項，回到同一個任務補齊即可。'
+        + '療程識別與病人代號由系統產生；送出後立即顯示四軸缺項與系統自動覆核。</div>'
+        + '<div class="grid"><div><label>病人</label><select id="pi_pt"><option value="">收新病人（代號 ' + esc(d.suggested_patient_ref || '') + '）</option>' + pts + '</select></div></div>'
+        + '<div class="grid" id="pi_form" data-task="MD_CREATE_REGIMEN">' + ef.map(function(f){ return taskFieldHtml(f, defaults[f.engine_key], ents); }).join('') + '</div>'
+        + '<div id="pi_fixed" class="fieldnote">院內固定給藥參數載入中…</div><div id="pi_stab"></div>'
+        + '<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap"><button class="act" id="pi_go">送出收案</button><button class="act secondary" id="pi_cancel">取消</button></div>'
+        + '<div id="pi_result"></div></div>';
+      function fv(k){ var x = el('pi_form').querySelector('[data-k="' + k + '"]'); return x ? x.value : ''; }
+      function refresh(){ loadStability({ ingredient_id: fv('ingredient_id'), daily_dose_mg: fv('daily_dose') || null }, 'pi_stab'); showFixed(); }
+      /* R62-DOSE-01：給藥頻次、最終體積、稀釋液為院內固定值（167），唯讀顯示；輸液器不審核。濃度＝每日劑量 ÷ 最終體積。 */
+      var FIX = null;
+      function showFixed(){
+        if (!el('pi_fixed')) return;
+        if (!FIX) return;
+        if (FIX.state !== 'OK') { el('pi_fixed').innerHTML = msg('warn', '院內固定給藥參數（167）未齊：' + esc((FIX.missing || []).concat(FIX.invalid || []).join('、')) + '——系統不代填，相關欄位將列為缺項'); return; }
+        var dd = Number(fv('daily_dose')), v = FIX.values.final_vol_ml;
+        var conc = (dd > 0 && v > 0) ? '；最終濃度約 <b>' + esc(Math.round(dd / v * 100) / 100) + ' mg/mL</b>' : '';
+        el('pi_fixed').innerHTML = '<b>院內固定（自動帶入，唯讀）：</b>給藥頻次 ' + esc(FIX.display.dosing_frequency || FIX.values.dosing_frequency)
+          + '；最終體積 ' + esc(v) + ' mL；稀釋液 ' + esc(FIX.display.diluent || FIX.values.diluent) + '；' + esc(FIX.display.device_review || '') + conc
+          + '。每日劑量將依實證與腎功能（Cockcroft-Gault）審核，範圍外由藥師具名決定，不擋收案。';
+      }
+      call(function(rf){ FIX = rf.data || { state: 'INCOMPLETE', missing: ['（無法載入）'] }; showFixed(); })['apiFixedAdministration']({});
+      el('pi_form').addEventListener('change', function(e){ var k = e.target && e.target.getAttribute('data-k'); if (k === 'ingredient_id' || k === 'daily_dose') refresh(); });
+      el('pi_form').addEventListener('input', function(e){ if (e.target && e.target.getAttribute('data-k') === 'daily_dose') showFixed(); });
+      el('pi_cancel').addEventListener('click', function(){ box.innerHTML = ''; });
+      el('pi_go').addEventListener('click', submitIntake);
+    })['apiNewEpisode']({});
+  }).apiTaskScreen({ task_id: 'MD_CREATE_REGIMEN' });
+}
+/* 送出：只送畫面上（＝任務模型之可編輯欄位）有填之值；伺服端以同一任務模型逐欄檢核，不在模型內之鍵拒收。 */
+function submitIntake(){
+  var btn = el('pi_go'); btn.disabled = true;
+  var values = {};
+  Array.prototype.forEach.call(el('pi_form').querySelectorAll('.fld:not(.hidden) [data-k]'), function(x){
+    if (x.disabled) return;
+    var k = x.getAttribute('data-k');
+    var v = (x.type === 'checkbox') ? x.checked : (x.multiple ? selectedValues(x) : x.value);
+    if (x.type === 'checkbox') { if (v) values[k] = true; return; }
+    if (Array.isArray(v) ? v.length : v !== '') values[k] = v;
+  });
+  var req = { values: values };
+  if (el('pi_pt').value) req.patient_ref = el('pi_pt').value; else req.new_patient = true;
+  el('pi_result').innerHTML = '<div class="fieldnote">送出中…</div>';
+  call(function(r){
+    btn.disabled = false;
+    var d = r.data || {};
+    if (!r.ok || d.state === 'BLOCKED') { el('pi_result').innerHTML = msg('bad', '<b>收案未完成。</b> ' + esc(d.reason || zhBlock(d.blocked_by) || r.error || '')); return; }
+    var h = msg(d.state === 'OK' ? 'ok' : 'warn', '療程 <b>' + esc(d.episode_id) + '</b>（病人 ' + esc(d.patient_ref) + '）：'
+          + (d.steps || []).map(function(s){ return esc(s.step) + (s.ok ? ' ✓' : ' ✗（' + esc(s.reason || s.status) + '）'); }).join('；'));
+    if ((d.not_yet_filled || []).length) h += '<div class="fieldnote">建立療程尚未填之欄位（回到「我要填的 → 建立療程」補齊）：' + d.not_yet_filled.map(esc).join('、') + '</div>';
+    if ((d.team || []).length) h += '<div class="fieldnote">已加入照護團隊：' + d.team.map(function(t){ return esc(t.actor_id) + '（' + esc(t.profession) + (t.ok ? '' : '：' + esc(t.reason || t.status)) + '）'; }).join('、') + '</div>';
+    h += renderGapTable(d.gaps) + renderStabilityCard(d.stability) + renderSystemReview(d.system_review, true);
+    h += '<button class="act" id="pi_open">開啟此療程</button>';
+    el('pi_result').innerHTML = h;
+    el('pi_open').addEventListener('click', function(){ openEpisode(d.episode_id, d.patient_ref); });
+  }).apiPhysicianIntake(req);
+}
+var RV_STATUS_ZH = { PASS:'通過', NEEDS_ATTENTION:'需處理（藥師具名決定）', WARNING:'警示', CONFLICT:'衝突', DATA_UNKNOWN_BLOCKED:'資料不足', NOT_IMPLEMENTED_BLOCKED:'功能或政策未就緒',
+                     STALE_BLOCKED:'資料過期', NOT_APPLICABLE:'不適用', EXPIRED_EVIDENCE:'證據過期', PRODUCT_MISMATCH:'產品不符', STABILITY_MISMATCH:'安定性不符' };
+function renderSystemReview(sr, readonly){
+  if (!sr) return '';
+  var h = '<div class="card"><h2>系統自動完整覆核</h2><div class="sub">療法建議與每日劑量審核、過敏與交互作用、Vancomycin TDM 計算；指紋 <code>' + esc(sr.fingerprint || '') + '</code>（處方或資料一改變，指紋即不同）</div>'
+        + '<div class="tblwrap"><table><tr><th>領域</th><th>系統結果</th><th>說明</th>' + (readonly ? '' : '<th>藥師再覆核</th>') + '</tr>';
+  (sr.domains || []).forEach(function(dm){
+    h += '<tr><td>' + esc(dm.label) + '</td><td>' + esc(RV_STATUS_ZH[dm.status] || dm.status) + '</td><td>' + esc(dm.summary || '') + '</td>';
+    if (!readonly) {
+      if (dm.status === 'NOT_APPLICABLE') h += '<td class="fieldnote">不適用</td>';
+      else {
+        h += '<td><select data-rr="' + esc(dm.domain) + '"><option value="">請選擇</option><option value="AGREE">同意</option><option value="DISAGREE">不同意</option></select>'
+           + '<select data-rrr="' + esc(dm.domain) + '"><option value="">（不同意時）理由</option>'
+           + Object.keys(sr.reason_options || {}).map(function(k){ return '<option value="' + esc(k) + '">' + esc(sr.reason_options[k]) + '</option>'; }).join('') + '</select>';
+        /* R62-DOSE-01：需處理之領域選「同意」時必須附理由（說不出理由請選不同意） */
+        if (dm.status === 'NEEDS_ATTENTION')
+          h += '<select data-rra="' + esc(dm.domain) + '"><option value="">（需處理而同意時）理由</option>'
+             + Object.keys(sr.accept_reason_options || {}).map(function(k){ return '<option value="' + esc(k) + '">' + esc(sr.accept_reason_options[k]) + '</option>'; }).join('') + '</select>';
+        h += '</td>';
+      }
+    }
+    h += '</tr>';
+  });
+  h += '</table></div>';
+  h += renderDoseReview(sr.dose_review);
+  if (!readonly) {
+    var rr = sr.pharmacist_rereview;
+    h += '<div class="fieldnote">' + (rr ? ('上次再覆核：' + esc(rr.reviewed_by) + '（' + esc(rr.reviewed_at) + '）' + (sr.rereview_current ? '，與目前系統結果一致' : '，★ 已不是目前這一版，請重做')) : '尚未再覆核') + '</div>';
+    if ((sr.domains || []).some(function(dm){ return dm.domain === 'VANCO_TDM' && dm.status !== 'NOT_APPLICABLE'; }))
+      h += '<div class="grid"><div><label>Vancomycin 穩態濃度 Css（mg/L）</label><input id="rr_css" type="number" step="any"></div>'
+         + '<div><label>距開始或上次調整（小時）</label><input id="rr_hrs" type="number" step="any"></div>'
+         + '<div><label>腎功能未變（藥師確認）</label><select id="rr_renal"><option value="">請選擇</option><option value="TRUE">是</option><option value="FALSE">否</option></select></div>'
+         + '<div><label>目標適用範圍</label><select id="rr_scope"><option value="MRSA_MIC_LE_1">MRSA 且 MIC ≤1</option><option value="OTHER_OR_UNKNOWN">其他或不明</option></select></div></div>';
+    h += '<button class="act" id="rr_go" data-fp="' + esc(sr.fingerprint || '') + '">送出藥師再覆核</button><div id="rr_result"></div>';
+  }
+  return h + '</div>';
+}
+/* R62-DOSE-01：每日劑量審核卡（範圍、依據等級、CrCl、BMI ≥30 之調整體重結果、出處）。 */
+var DR_BASIS_ZH = { CI_LABEL:'仿單／SmPC 連續輸注劑量', CI_STUDY:'連續輸注研究或院際指引', GUIDELINE:'專業學會指引',
+                    INFERENCE:'推論（仿單日總量或指引比例換算）', NO_EVIDENCE:'無可用證據' };
+function renderDoseReview(dr){
+  if (!dr) return '';
+  var c = dr.crcl || {};
+  var h = '<h3 style="margin:12px 0 4px">每日劑量審核（依腎功能）</h3><div class="fieldnote">審核不是建議劑量：範圍外為「需處理」，由藥師具名決定；不擋醫師收案。</div><div class="tblwrap"><table>'
+        + '<tr><th>結果</th><td>' + esc(dr.result_zh || dr.result) + '</td></tr>'
+        + '<tr><th>說明</th><td>' + esc(dr.summary || '') + '</td></tr>';
+  if (dr.range) h += '<tr><th>審核範圍</th><td>' + esc(dr.range.text || '') + '</td></tr>';
+  if (dr.basis_class) h += '<tr><th>依據等級</th><td>' + esc(DR_BASIS_ZH[dr.basis_class] || dr.basis_class) + '（規則 ' + esc(dr.rule_id || '') + '）</td></tr>';
+  if (typeof c.crcl === 'number') h += '<tr><th>CrCl（CG，實際體重）</th><td>' + esc(Math.round(c.crcl * 10) / 10) + ' mL/min'
+      + (typeof c.crcl_adjbw === 'number' ? '；調整體重 ' + esc(Math.round(c.crcl_adjbw * 10) / 10) + ' mL/min（BMI ' + esc(Math.round(c.bmi * 10) / 10) + '，僅供參考）' : '') + '</td></tr>';
+  if (dr.concentration_mg_per_ml != null) h += '<tr><th>最終濃度</th><td>約 ' + esc(dr.concentration_mg_per_ml) + ' mg/mL（每日劑量 ÷ ' + esc(dr.fixed && dr.fixed.final_vol_ml) + ' mL）</td></tr>';
+  if ((dr.notes || []).length) h += '<tr><th>附註</th><td>' + dr.notes.map(esc).join('<br>') + '</td></tr>';
+  if (dr.review_note) h += '<tr><th>藥師參考</th><td>' + esc(dr.review_note) + '</td></tr>';
+  if (dr.dialysis_note) h += '<tr><th>透析／CRRT（僅供顯示）</th><td>' + esc(dr.dialysis_note) + '</td></tr>';
+  if ((dr.evidence_keys || []).length) h += '<tr><th>出處</th><td class="fieldnote">' + dr.evidence_keys.map(esc).join('、') + '（見 169_劑量實證登錄）</td></tr>';
+  return h + '</table></div>';
+}
+function bindReReview(){
+  var b = el('rr_go'); if (!b) return;
+  b.addEventListener('click', function(){
+    var dec = {}, rc = {}, ac = {};
+    Array.prototype.forEach.call(document.querySelectorAll('[data-rr]'), function(s){ dec[s.getAttribute('data-rr')] = s.value; });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-rrr]'), function(s){ if (s.value) rc[s.getAttribute('data-rrr')] = s.value; });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-rra]'), function(s){ if (s.value) ac[s.getAttribute('data-rra')] = s.value; });
+    var req = { episode_id: STATE.episode_id, system_review_fingerprint: b.getAttribute('data-fp'), decisions: dec, reason_codes: rc, accept_reason_codes: ac,
+                request_id: 'RR-' + STATE.episode_id + '-' + b.getAttribute('data-fp') };
+    if (el('rr_css') && el('rr_css').value) req.tdm_input = { css_mg_L: el('rr_css').value, hours_since_start_or_change: el('rr_hrs').value,
+                                                             renal_unchanged_confirmed: el('rr_renal').value === 'TRUE', target_scope: el('rr_scope').value };
+    b.disabled = true;
+    call(function(r){ b.disabled = false; var d = r.data || {};
+      el('rr_result').innerHTML = (!r.ok || d.state !== 'OK') ? msg('bad', '再覆核未存：' + esc(d.reason || zhBlock(d.blocked_by) || r.error || ''))
+        : msg('ok', '已存藥師再覆核（' + esc(d.rereview && d.rereview.reviewed_at) + '）' + (d.rereview && d.rereview.tdm_result ? '；TDM：' + esc(JSON.stringify(d.rereview.tdm_result.status || d.rereview.tdm_result)) : ''));
+    }).apiPharmacistReReview(req);
+  });
+}
+/* R62：結案三欄之選項一律取自伺服端（MD_REASSESS 任務畫面之 MD-48／MD-51／MD-50，來源 19_選項_成果分類／19_選項_是否），
+   畫面不寫死任何代碼或標籤——院方改了選項或標籤，這裡跟著改；選項來源沒有已核准之列時不顯示結案鈕。 */
+var CLOSE_FIELDS = [{ id: 'co_cls', fid: 'MD-48', label: '成果分類' }, { id: 'co_re', fid: 'MD-51', label: '再住院' },
+                    { id: 'co_ade', fid: 'MD-50', label: '藥物不良事件' }];
+function renderCloseOut(t){
+  var fields = (t && t.fields) || [];
+  var empty = [];
+  var sel = CLOSE_FIELDS.map(function(c){
+    var f = fields.filter(function(x){ return String(x.field_id) === c.fid; })[0];
+    var opts = (f && f.options) || [];
+    if (!opts.length) empty.push(c.label);
+    return '<div><label>' + esc(c.label) + ' <span class="req">*</span></label><select id="' + c.id + '"><option value="">請選擇</option>'
+         + opts.map(function(o){ return '<option value="' + esc(o.value) + '">' + esc(o.label) + '</option>'; }).join('') + '</select></div>';
+  }).join('');
+  return '<div class="card"><h2>醫師結案</h2><div class="sub">成果分類、再住院、藥物不良事件為必填；存檔後療程轉為「完成」，成效指標自動形成。</div>'
+    + (empty.length ? msg('warn', '以下欄位之選項來源沒有已核准之列，暫時無法結案：' + esc(empty.join('、'))) : '')
+    + '<div class="grid">' + sel + '</div>'
+    + (empty.length ? '' : '<button class="act" id="co_go">結案</button>') + '<div id="co_result"></div></div>';
+}
+function loadCloseOut(boxId){
+  var box = el(boxId); if (!box) return;
+  box.innerHTML = '<div class="fieldnote">載入結案欄位…</div>';
+  call(function(r){ var t = r.data || {};
+    if (!el(boxId)) return;
+    if (!r.ok || t.ok === false || t.state === 'BLOCKED') { el(boxId).innerHTML = ''; return; }
+    el(boxId).innerHTML = renderCloseOut(t); bindCloseOut();
+  }).apiTaskScreen({ task_id: 'MD_REASSESS', episode_id: STATE.episode_id });
+}
+function bindCloseOut(){
+  var b = el('co_go'); if (!b) return;
+  b.addEventListener('click', function(){
+    b.disabled = true;
+    call(function(r){ b.disabled = false; var d = r.data || {};
+      el('co_result').innerHTML = (!r.ok || d.state === 'BLOCKED') ? msg('bad', '結案未完成：' + esc(d.reason || zhBlock(d.blocked_by) || r.error || ''))
+        : msg(d.state === 'OK' ? 'ok' : 'warn', d.state === 'OK' ? '已結案；成效指標將於下一次整理時更新' : esc(d.note || '部分完成'));
+    }).apiCloseEpisode({ episode_id: STATE.episode_id, outcome_class: el('co_cls').value, readmission: el('co_re').value,
+                         adverse_drug_event: el('co_ade').value, request_id: 'CLOSE-' + STATE.episode_id });
+  });
+}
+function renderR62Patient(){
+  var v = el('view'); if (!v || !STATE.episode_id) return;
+  v.insertAdjacentHTML('beforeend', '<div id="r62_gaps"></div><div id="r62_stab"></div><div id="r62_rev"></div><div id="r62_close"></div>');
+  call(function(r){ var d = r.data || {}; if (el('r62_gaps')) el('r62_gaps').innerHTML = r.ok ? renderGapTable(d) : ''; })['apiFourAxisGaps']({ episode_id: STATE.episode_id });
+  loadStability({ episode_id: STATE.episode_id }, 'r62_stab');
+  if (STATE.roles.indexOf('RPh') >= 0 || STATE.roles.indexOf('MD') >= 0)
+    call(function(r){ var d = r.data || {};
+      if (!el('r62_rev')) return;
+      el('r62_rev').innerHTML = (!r.ok || d.state === 'BLOCKED') ? '' : renderSystemReview(d, STATE.primary !== 'RPh');
+      bindReReview(); })['apiSystemReview']({ episode_id: STATE.episode_id });
+  if (STATE.primary === 'MD' && el('r62_close')) loadCloseOut('r62_close');
+}
+function renderStabilityOverview(boxId){
+  var box = el(boxId); if (!box) return;
+  call(function(r){ var d = r.data || {};
+    if (!r.ok || d.state === 'BLOCKED') { box.innerHTML = ''; return; }
+    var sc = ['IMMEDIATE_USE', 'REFRIGERATED_PRESTORAGE', 'INFUSION_BAG_REFERENCE', 'ROUTE_CONTRAINDICATION'];
+    var nm = { IMMEDIATE_USE:'一般調製（現配即用）', REFRIGERATED_PRESTORAGE:'預先調製後冷藏', INFUSION_BAG_REFERENCE:'輸液袋參考', ROUTE_CONTRAINDICATION:'給藥途徑' };
+    var scopeZh = { ACTIVE:'平台可開立', INACTIVE:'平台停用', CANDIDATE:'候選藥' };
+    var h = '<div class="card"><h2>調製後安定性提示總覽</h2><div class="sub">' + esc(d.not_bud_notice || '') + '</div><div class="tblwrap"><table><tr><th>藥品</th><th>範圍</th>'
+          + sc.map(function(s){ return '<th>' + esc(nm[s]) + '</th>'; }).join('') + '</tr>';
+    (d.items || []).forEach(function(it){
+      h += '<tr><td>' + esc(it.drug_display) + '</td><td>' + esc(scopeZh[it.platform_scope] || it.platform_scope || '') + '</td>'
+         + sc.map(function(s){ var x = it.lights[s]; return '<td>' + (x ? lightChip(x.light) : '<span class="fieldnote">—</span>') + '</td>'; }).join('') + '</tr>';
+    });
+    box.innerHTML = h + '</table></div></div>';
+  })['apiStabilityPrompt']({ overview: true });
+}
+
+boot();
+</script>
+
+<!-- OPAT-APP-END -->
+</body>
+</html>
