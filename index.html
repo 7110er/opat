@@ -6,7 +6,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/client; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; frame-src https://accounts.google.com/gsi/; connect-src 'self' https://accounts.google.com/gsi/ https://script.google.com https://script.googleusercontent.com; img-src 'self' data: https://*.googleusercontent.com https://*.gstatic.com; base-uri 'none'; form-action 'none'; object-src 'none'">
 <meta name="referrer" content="no-referrer">
 <title>OPAT 門診靜脈抗生素治療平台</title>
-<!-- OPAT GitHub 版　Release R64（v2.50）Build 02f142f79ecaa8aa　ui/app.html sha256 a50de1909502bcf2345f31dc1e9786e8c2e86a1ceaf681e3811765fdb796ed6b -->
+<!-- OPAT GitHub 版　R65 施工中驗證版（未封版）wip-c0005ba5ca5f8803　ui/app.html sha256 bd0ccda8cabddffe2dad13ddd59464b2bf4f66c465024c378578e5280c305d37 -->
 <script src="config.js"></script>
 <script>/* OPAT-GITHUB-SHIM-BEGIN（tools/build_github_pages.py 產生；請勿手改） */
 (function () {
@@ -262,18 +262,43 @@ function safeUrl(u){ var s = String(u == null ? '' : u).trim(); return /^https?:
 function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){
   return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
 /* R40（C11-025、UX-003）：所有伺服端呼叫一律經此，失敗時說出發生了什麼、資料還在不在。 */
-function call(onOk, onFail){
-  return google.script.run
-    .withSuccessHandler(onOk)
-    .withFailureHandler(function(e){
-      var msg = '與伺服端連線失敗：' + (e && e.message ? e.message : String(e))
-              + '。你填的內容仍在畫面上，未送出；請稍後再試一次。';
-      var out = el('result') || el('view');
-      if (out) out.insertAdjacentHTML('afterbegin', '<div class="msg bad">' + esc(msg) + '</div>');
-      Array.prototype.forEach.call(document.querySelectorAll('button.act'), function(b){ b.disabled=false; });
-      if (onFail) onFail(e);
-    });
+/* R65W-CALL-DEDUPE-BEGIN
+   ★ R65／WP1（R65-UI-DEDUPE-01）：同一動作、同一參數之呼叫尚在進行中時不再送第二次，結果交給兩邊的處理函式。
+     部署實測：點一次分頁，apiWorklist 與 apiStabilityPrompt 各送兩次（每次 9～20 s 之後端成本加倍）。
+     寫入動作（不在唯讀清單者）同樣去重（連點兩下只送一次），且一送出即讓進行中之讀取失效——寫入之後再讀，必須讀到寫入後之狀態。 */
+var CALL_READONLY = { apiReadiness:1, apiWorklist:1, apiLoadEpisode:1, apiTaskScreen:1, apiTaskList:1, apiStabilityPrompt:1,
+  apiFourAxisGaps:1, apiSystemReview:1, apiFixedAdministration:1, apiOptionList:1, apiDashboard:1, apiTimeline:1,
+  apiTeachingCards:1, apiPatientList:1, apiScreen:1, apiAttributionNotice:1, apiPharmacyReviewChecks:1, apiAuditTrail:1 };
+var CALL_INFLIGHT = {};
+var CALL_STATS = { issued: {}, deduped: {} };
+function callKey(name, args){ try { return String(name) + '|' + JSON.stringify(args); } catch (e) { return null; } }
+function callFailUi(e){
+  var msg = '與伺服端連線失敗：' + (e && e.message ? e.message : String(e))
+          + '。你填的內容仍在畫面上，未送出；請稍後再試一次。';
+  var out = el('result') || el('view');
+  if (out) out.insertAdjacentHTML('afterbegin', '<div class="msg bad">' + esc(msg) + '</div>');
+  Array.prototype.forEach.call(document.querySelectorAll('button.act'), function(b){ b.disabled=false; });
 }
+function call(onOk, onFail){
+  return new Proxy({}, { get: function(t, name){
+    return function(){
+      var args = Array.prototype.slice.call(arguments), nm = String(name);
+      var ro = !!CALL_READONLY[nm], key = callKey(nm, args);
+      if (!ro) Object.keys(CALL_INFLIGHT).forEach(function(k){ if (CALL_INFLIGHT[k].ro) CALL_INFLIGHT[k].stale = true; });
+      var cur = key ? CALL_INFLIGHT[key] : null;
+      if (cur && !cur.stale) { cur.subs.push([onOk, onFail]); CALL_STATS.deduped[nm] = (CALL_STATS.deduped[nm] || 0) + 1; return; }
+      var ent = { subs: [[onOk, onFail]], ro: ro, stale: false };
+      if (key) CALL_INFLIGHT[key] = ent;
+      CALL_STATS.issued[nm] = (CALL_STATS.issued[nm] || 0) + 1;
+      function done(){ if (key && CALL_INFLIGHT[key] === ent) delete CALL_INFLIGHT[key]; }
+      var runner = google.script.run
+        .withSuccessHandler(function(r){ done(); ent.subs.forEach(function(s){ if (s[0]) s[0](r); }); })
+        .withFailureHandler(function(e){ done(); callFailUi(e); ent.subs.forEach(function(s){ if (s[1]) s[1](e); }); });
+      return runner[nm].apply(runner, args);
+    };
+  } });
+}
+/* R65W-CALL-DEDUPE-END */
 function msg(kind, html){ return '<div class="msg ' + kind + '">' + html + '</div>'; }
 
 /* ── 啟動：現況、身分、版本 ───────────────────────────────────── */
@@ -289,7 +314,7 @@ function boot(){
     var dep = (r.data && r.data.deployment) || {};
     if (dep.is_admin) el('selftestlink').innerHTML = '　自我測試頁：在網址後面加上 <code>?page=selftest</code>';
     show('WORK');
-  }).apiReadiness();
+  }).apiReadiness({ light: true });   /* R65／WP1：首頁只取輕量現況；完整現況（預檢、規則綁定、全量完整性）於「現況與限制」頁才取 */
 }
 
 /* R38：多人使用時，畫面上第一個要看得懂的東西是「系統認為你是誰」。R41：簡化為一句話＋原因。 */
@@ -524,6 +549,19 @@ function clearPatientState(){
   var rr = el('result'); if (rr) rr.innerHTML = '';
 }
 
+/* R65W-EPCTX-BEGIN */
+function episodeCreated(d){
+  return !!(d && d.episode_id && d.patient_ref && d.state !== 'BLOCKED' && (d.steps || [])[0] && d.steps[0].ok === true);
+}
+/** 設定目前療程（清掉上一位病人之畫面狀態），不換頁。 */
+function setEpisodeContext(ep, pr){
+  if (!ep || !pr) return false;
+  clearPatientState();
+  STATE.episode_id = ep; STATE.patient_ref = pr;
+  renderBanner();
+  return true;
+}
+/* R65W-EPCTX-END */
 function openEpisode(ep, pr){
   if (!ep || !pr) { el('view').insertAdjacentHTML('afterbegin',
     msg('bad', '缺療程識別或病人代號。請從清單開啟，或按「新增療程」由系統產生。')); return; }
@@ -1651,6 +1689,11 @@ function bindKpi(){
 }
 
 function renderStatus(){
+  /* R65／WP1：首頁之現況為輕量版（light）；進入本頁時才向伺服端取完整版，取回後再畫 */
+  if (STATE.readiness && STATE.readiness.light) {
+    call(function(r){ if (r && r.data) { STATE.readiness = r.data; renderWhoami(r.data); } if (STATE.tab === 'STATUS') renderStatus(); }).apiReadiness();
+    return;
+  }
   var _emr = emergencyNotice();
   var d = STATE.readiness || {};
   var h = _emr + '<div class="card"><h2>現在可以做什麼、不可以做什麼</h2><div class="sub">工程層可用不等於臨床可用。這幾層意義不同，不能只看第一層。</div>'
@@ -1826,6 +1869,9 @@ function submitIntake(){
     h += '<button class="act" id="pi_open">開啟此療程</button>';
     el('pi_result').innerHTML = h;
     el('pi_open').addEventListener('click', function(){ openEpisode(d.episode_id, d.patient_ref); });
+    /* ★ R65／WP1（R65-UI-EPCTX-01）：療程建立成功即設為目前療程——部署實測建立後切到「這位病人」顯示「尚未選定病人與療程」。
+       只設定情境、不換頁（收案結果仍留在畫面上）；療程未建立成功（第一步失敗）者不設。 */
+    if (episodeCreated(d)) setEpisodeContext(d.episode_id, d.patient_ref);
   }).apiPhysicianIntake(req);
 }
 var RV_STATUS_ZH = { PASS:'通過', NEEDS_ATTENTION:'需處理（藥師具名決定）', WARNING:'警示', CONFLICT:'衝突', DATA_UNKNOWN_BLOCKED:'資料不足', NOT_IMPLEMENTED_BLOCKED:'功能或政策未就緒',
